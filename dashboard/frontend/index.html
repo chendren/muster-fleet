@@ -867,26 +867,31 @@
   }
 
   /* ---------- status classification ---------- */
-  function classifyAgent(agent, now) {
-    // Prefer explicit live flag + last_seen window
+  // bestActivityTime: the server's `live` flag already combines muster's
+  // last_seen (only updated by explicit bus calls, not a heartbeat) with
+  // activity.updated_at (the local session's transcript/log mtime, which
+  // tracks an actively-working CLI far more accurately). The UI must use
+  // the SAME combined timestamp for its "last active" display, or the dot
+  // and the text will contradict each other (e.g. a green "live" dot next
+  // to "106m ago").
+  function bestActivityTime(agent) {
     var lastSeen = parseTime(agent.last_seen);
-    var age = lastSeen != null ? now - lastSeen : null;
+    var actUpdated = agent.activity ? parseTime(agent.activity.updated_at) : null;
+    if (lastSeen == null) return actUpdated;
+    if (actUpdated == null) return lastSeen;
+    return Math.max(lastSeen, actUpdated);
+  }
 
-    if (agent.live === false) {
-      if (age != null && age < LIVE_MS) return "live";
-      if (age != null && age < QUIET_MS) return "quiet";
-      return "departed";
-    }
+  function classifyAgent(agent, now) {
+    if (agent.departed) return "departed";
+    if (agent.live === true) return "live";
 
-    if (agent.live === true) {
-      if (age != null && age > QUIET_MS) return "departed";
-      if (age != null && age > LIVE_MS) return "quiet";
-      return "live";
-    }
-
-    // No live flag: derive from last_seen only
+    // Not live per the server: distinguish "quiet" (recently active, just
+    // outside the live window) from "departed" (nothing for a long while)
+    // using the same combined timestamp, so this still agrees with the dot.
+    var t = bestActivityTime(agent);
+    var age = t != null ? now - t : null;
     if (age == null) return "departed";
-    if (age <= LIVE_MS) return "live";
     if (age <= QUIET_MS) return "quiet";
     return "departed";
   }
@@ -981,7 +986,7 @@
         " · " +
         escapeHtml(a.model_type || "—") +
         " · seen " +
-        escapeHtml(relTime(a.last_seen, now)) +
+        escapeHtml(relTime(bestActivityTime(a), now)) +
         "</div>" +
         "</div>" +
         '<span class="status-badge ' +
@@ -1262,7 +1267,7 @@
       '"></span>' +
       st +
       "</span> · last seen " +
-      escapeHtml(relTime(a.last_seen, now)) +
+      escapeHtml(relTime(bestActivityTime(a), now)) +
       "</div>" +
       '<div class="k">Activity source</div><div class="v">' +
       escapeHtml(act.source || "—") +

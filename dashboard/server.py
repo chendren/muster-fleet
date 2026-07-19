@@ -141,12 +141,22 @@ def merge_activity(agents, collector_payload, machine):
         target["pane_snapshot"] = entry.get("pane_snapshot")
 
 
+def parse_iso_to_ms(iso_str):
+    """Parse an ISO-8601 timestamp (with or without trailing Z) to epoch ms."""
+    if not iso_str:
+        return None
+    try:
+        s = iso_str.replace("Z", "+00:00")
+        return int(datetime.fromisoformat(s).timestamp() * 1000)
+    except (ValueError, TypeError):
+        return None
+
+
 def build_status():
     agents, threads, events = query_bus_db()
 
     for a in agents:
         a["machine"] = ALIAS_MACHINE.get(a["alias"], "unknown")
-        a["live"] = (now_ms() - a["last_seen"]) < 60_000 and not a["departed"]
         a["activity"] = {"source": "none"}
         a["pane_snapshot"] = None
         # attach current task: most recently updated open/claimed/needs_info/
@@ -164,6 +174,22 @@ def build_status():
     spoke_payload = run_spoke_collector()
     merge_activity(agents, hub_payload, "hub")
     merge_activity(agents, spoke_payload, "spoke")
+
+    # "live" combines two independent signals, taking whichever is fresher:
+    # muster's own last_seen (only updated by explicit bus calls — register,
+    # send, task ops — NOT a continuous heartbeat) and the collector's
+    # activity.updated_at (the local session's own transcript/log mtime,
+    # which for an actively-working CLI session updates on every turn
+    # regardless of whether it happens to touch the muster bus that turn).
+    # Using last_seen alone under-reports liveness for a session that's
+    # genuinely active but quiet on the bus for a stretch.
+    for a in agents:
+        candidates = [a["last_seen"]]
+        act_ts = parse_iso_to_ms(a["activity"].get("updated_at"))
+        if act_ts is not None:
+            candidates.append(act_ts)
+        most_recent = max(candidates)
+        a["live"] = (now_ms() - most_recent) < 60_000 and not a["departed"]
 
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
