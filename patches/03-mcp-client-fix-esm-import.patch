@@ -1,0 +1,24 @@
+Patch target: dist/mcp/client.js
+
+Problem: ensureServersInitialized() does a dynamic import of
+'../mcp/config' with no file extension. Node's ESM resolver requires
+explicit extensions on relative imports and rejects this outright with
+ERR_MODULE_NOT_FOUND. This exception was caught by an outer .catch(() => {})
+in the original getAllGrokTools() (see patch 02), so it failed completely
+silently — no MCP server ever actually initialized in the chat/agent loop,
+even though the standalone `grok mcp test` / `grok mcp list` commands
+(which apparently go through a different code path) reported the server as
+healthy. This is the root cause; patch 02 alone does not fix anything until
+this import actually resolves.
+
+--- a/dist/mcp/client.js
++++ b/dist/mcp/client.js
+@@ (inside ensureServersInitialized(), ~line 113)
+-        const { loadMCPConfig } = await import('../mcp/config');
++        const { loadMCPConfig } = await import('../mcp/config.js');
+
+After this fix, expect the first MCP-tool-using headless call to take
+15-20+ seconds on a cold start (spawning the MCP server subprocess,
+completing its handshake, listing its tools) before the actual chat
+completion request goes out. That's expected, not a hang — give it a
+generous timeout rather than assuming it's stuck.

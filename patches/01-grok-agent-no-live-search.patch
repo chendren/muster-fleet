@@ -1,0 +1,33 @@
+Patch target: dist/agent/grok-agent.js (in an installed @vibe-kit/grok-cli,
+e.g. ~/.npm-global/lib/node_modules/@vibe-kit/grok-cli/dist/agent/grok-agent.js)
+
+Problem: this version always sends xAI's `search_parameters` field, even
+when set to `{mode: "off"}`. xAI has deprecated Live Search entirely, so the
+API now rejects that field outright with a 410, regardless of mode. Fix:
+omit the field entirely by passing `undefined` for the searchOptions
+argument at all three call sites.
+
+--- a/dist/agent/grok-agent.js
++++ b/dist/agent/grok-agent.js
+@@ (first call site, ~line 172)
+-            let currentResponse = await this.grokClient.chat(this.messages, tools, undefined, this.isGrokModel() && this.shouldUseSearchFor(message)
+-                ? { search_parameters: { mode: "auto" } }
+-                : { search_parameters: { mode: "off" } });
++            let currentResponse = await this.grokClient.chat(this.messages, tools, undefined, undefined);
+
+@@ (second call site, ~line 244)
+-                    currentResponse = await this.grokClient.chat(this.messages, tools, undefined, this.isGrokModel() && this.shouldUseSearchFor(message)
+-                        ? { search_parameters: { mode: "auto" } }
+-                        : { search_parameters: { mode: "off" } });
++                    currentResponse = await this.grokClient.chat(this.messages, tools, undefined, undefined);
+
+@@ (third call site, streaming path, ~line 353)
+-                const stream = this.grokClient.chatStream(this.messages, tools, undefined, this.isGrokModel() && this.shouldUseSearchFor(message)
+-                    ? { search_parameters: { mode: "auto" } }
+-                    : { search_parameters: { mode: "off" } });
++                const stream = this.grokClient.chatStream(this.messages, tools, undefined, undefined);
+
+Apply by hand (these are compiled files, not source — a real `patch -p1`
+target depends on your exact installed version's line numbers). Simplest
+approach: open the file, search for `search_parameters`, and replace each
+of the three ternary expressions with a bare `undefined` as shown above.

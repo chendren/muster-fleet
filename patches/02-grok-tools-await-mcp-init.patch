@@ -1,0 +1,28 @@
+Patch target: dist/grok/tools.js
+
+Problem: getAllGrokTools() fires MCP server initialization but does not
+await it ("don't block"), so on a fresh/headless run the tool list is
+captured before any MCP server (e.g. muster) has finished its handshake —
+result: zero MCP tools available on a cold start, every single time.
+
+--- a/dist/grok/tools.js
++++ b/dist/grok/tools.js
+@@
+ export async function getAllGrokTools() {
+     const manager = getMCPManager();
+-    // Try to initialize servers if not already done, but don't block
+-    manager.ensureServersInitialized().catch(() => {
+-        // Ignore initialization errors to avoid blocking
+-    });
++    // Await MCP server init so tools are actually present on the first
++    // turn instead of racing a background connect.
++    await manager.ensureServersInitialized().catch(() => {
++        // Ignore initialization errors to avoid blocking
++    });
+     return addMCPToolsToGrokTools(GROK_TOOLS);
+ }
+
+Note: this alone is not sufficient — see 03-mcp-client-fix-esm-import.patch
+for the second, independent bug that also has to be fixed for MCP tools to
+actually load. Awaiting a promise that always rejects doesn't help until
+that one's fixed too.
