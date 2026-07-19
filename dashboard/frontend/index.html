@@ -1,0 +1,1528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Muster Fleet Dashboard</title>
+  <style>
+    :root {
+      --bg: #f4f5f7;
+      --bg-elevated: #ffffff;
+      --bg-muted: #eef0f3;
+      --border: #d8dde5;
+      --text: #1a1d24;
+      --text-muted: #5c6575;
+      --text-faint: #8b93a1;
+      --accent: #2f6fed;
+      --accent-soft: #e8f0fe;
+      --live: #1a9d5c;
+      --live-bg: #e6f7ee;
+      --quiet: #c9891a;
+      --quiet-bg: #fef6e6;
+      --departed: #9aa3b2;
+      --departed-bg: #f0f2f5;
+      --danger: #c0392b;
+      --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.08);
+      --radius: 10px;
+      --font: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+      --mono: "IBM Plex Mono", "SF Mono", "Menlo", "Consolas", monospace;
+      --col-open: #2f6fed;
+      --col-claimed: #7c5cbf;
+      --col-needs_info: #c9891a;
+      --col-blocked: #c0392b;
+      --col-completed: #1a9d5c;
+      --col-declined: #8b93a1;
+      --col-cancelled: #6b7280;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #0f1218;
+        --bg-elevated: #171b24;
+        --bg-muted: #1e2430;
+        --border: #2a3140;
+        --text: #e8ecf2;
+        --text-muted: #9aa3b2;
+        --text-faint: #6b7382;
+        --accent: #6b9aff;
+        --accent-soft: #1a2740;
+        --live: #3dce84;
+        --live-bg: #14261c;
+        --quiet: #e0a93a;
+        --quiet-bg: #2a2210;
+        --departed: #6b7382;
+        --departed-bg: #1a1e26;
+        --danger: #e05a4f;
+        --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.25);
+      }
+    }
+
+    :root[data-theme="dark"] {
+      --bg: #0f1218;
+      --bg-elevated: #171b24;
+      --bg-muted: #1e2430;
+      --border: #2a3140;
+      --text: #e8ecf2;
+      --text-muted: #9aa3b2;
+      --text-faint: #6b7382;
+      --accent: #6b9aff;
+      --accent-soft: #1a2740;
+      --live: #3dce84;
+      --live-bg: #14261c;
+      --quiet: #e0a93a;
+      --quiet-bg: #2a2210;
+      --departed: #6b7382;
+      --departed-bg: #1a1e26;
+      --danger: #e05a4f;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.25);
+    }
+
+    :root[data-theme="light"] {
+      --bg: #f4f5f7;
+      --bg-elevated: #ffffff;
+      --bg-muted: #eef0f3;
+      --border: #d8dde5;
+      --text: #1a1d24;
+      --text-muted: #5c6575;
+      --text-faint: #8b93a1;
+      --accent: #2f6fed;
+      --accent-soft: #e8f0fe;
+      --live: #1a9d5c;
+      --live-bg: #e6f7ee;
+      --quiet: #c9891a;
+      --quiet-bg: #fef6e6;
+      --departed: #9aa3b2;
+      --departed-bg: #f0f2f5;
+      --danger: #c0392b;
+      --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.08);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      padding: 20px 24px 40px;
+    }
+
+    header.app-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px 20px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 650;
+      letter-spacing: -0.02em;
+    }
+
+    header .meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px 16px;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    .poll-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-faint);
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
+    .poll-dot.ok { background: var(--live); }
+    .poll-dot.err { background: var(--danger); }
+
+    button.theme-toggle,
+    button.ghost {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font: inherit;
+      font-size: 0.82rem;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+    }
+
+    button.theme-toggle:hover,
+    button.ghost:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    section {
+      margin-bottom: 28px;
+    }
+
+    section > h2 {
+      margin: 0 0 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 18px;
+      margin-bottom: 14px;
+      padding: 10px 14px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .status-dot.live { background: var(--live); box-shadow: 0 0 0 2px var(--live-bg); }
+    .status-dot.quiet { background: var(--quiet); box-shadow: 0 0 0 2px var(--quiet-bg); }
+    .status-dot.departed { background: var(--departed); box-shadow: 0 0 0 2px var(--departed-bg); }
+
+    .agent-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 14px;
+    }
+
+    .agent-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: border-color 0.15s ease, transform 0.12s ease;
+      outline: none;
+    }
+
+    .agent-card:hover,
+    .agent-card:focus-visible {
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    .agent-card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .agent-alias {
+      font-weight: 650;
+      font-size: 1.05rem;
+      letter-spacing: -0.01em;
+    }
+
+    .agent-sub {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      margin-top: 2px;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: lowercase;
+      padding: 3px 8px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .status-badge.live { background: var(--live-bg); color: var(--live); }
+    .status-badge.quiet { background: var(--quiet-bg); color: var(--quiet); }
+    .status-badge.departed { background: var(--departed-bg); color: var(--departed); }
+
+    .machine-tag {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--bg-muted);
+      color: var(--text-muted);
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+
+    .task-line {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      padding: 8px 10px;
+      background: var(--bg-muted);
+      border-radius: 6px;
+      min-height: 2.4em;
+    }
+
+    .task-line strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .stat-tile {
+      background: var(--bg-muted);
+      border-radius: 6px;
+      padding: 8px 10px;
+      min-width: 0;
+    }
+
+    .stat-tile .label {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-faint);
+      margin-bottom: 2px;
+    }
+
+    .stat-tile .value {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .token-note {
+      margin-top: 8px;
+      font-size: 0.75rem;
+      color: var(--text-faint);
+      font-style: italic;
+    }
+
+    .token-bars {
+      margin-top: 14px;
+      padding: 12px 14px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .token-bars h3 {
+      margin: 0 0 10px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 100px 1fr 64px;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 6px;
+      font-size: 0.8rem;
+    }
+
+    .bar-row .name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text-muted);
+    }
+
+    .bar-track {
+      height: 8px;
+      background: var(--bg-muted);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 4px;
+      min-width: 2px;
+    }
+
+    .bar-val {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      color: var(--text-muted);
+    }
+
+    /* Kanban */
+    .kanban {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+      overflow-x: auto;
+    }
+
+    .kanban-col {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      min-height: 120px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .kanban-col-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.78rem;
+      font-weight: 650;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .kanban-col-head .count {
+      background: var(--bg-muted);
+      color: var(--text-muted);
+      padding: 1px 7px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+
+    .kanban-col-head .swatch {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 6px;
+      display: inline-block;
+    }
+
+    .kanban-cards {
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .task-card {
+      background: var(--bg-muted);
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 0.82rem;
+    }
+
+    .task-card .subject {
+      font-weight: 600;
+      margin-bottom: 6px;
+      word-break: break-word;
+    }
+
+    .task-card .meta {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .empty-col {
+      color: var(--text-faint);
+      font-size: 0.78rem;
+      text-align: center;
+      padding: 16px 8px;
+    }
+
+    /* Activity feed */
+    .feed {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      max-height: 360px;
+      overflow-y: auto;
+    }
+
+    .feed-item {
+      display: grid;
+      grid-template-columns: 72px 1fr;
+      gap: 10px;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.85rem;
+    }
+
+    .feed-item:last-child { border-bottom: none; }
+
+    .feed-time {
+      color: var(--text-faint);
+      font-size: 0.75rem;
+      font-variant-numeric: tabular-nums;
+      padding-top: 2px;
+    }
+
+    .feed-kind {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-weight: 650;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
+    .feed-body {
+      color: var(--text);
+    }
+
+    .feed-body .who {
+      font-weight: 600;
+    }
+
+    .feed-detail {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      margin-top: 2px;
+    }
+
+    .empty-state {
+      padding: 24px;
+      text-align: center;
+      color: var(--text-faint);
+    }
+
+    .error-banner {
+      background: #fdecea;
+      color: #8b1e16;
+      border: 1px solid #f5c6c2;
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      margin-bottom: 16px;
+      font-size: 0.88rem;
+    }
+
+    :root[data-theme="dark"] .error-banner,
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) .error-banner {
+        background: #2a1514;
+        color: #f0a8a0;
+        border-color: #4a2420;
+      }
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 12, 18, 0.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 100;
+    }
+
+    .modal-backdrop.open { display: flex; }
+
+    .modal {
+      background: var(--bg-elevated);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
+      width: min(720px, 100%);
+      max-height: min(85vh, 800px);
+      overflow: auto;
+      padding: 0;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: var(--bg-elevated);
+      z-index: 1;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 1.15rem;
+    }
+
+    .modal-body {
+      padding: 16px 18px 22px;
+    }
+
+    .modal-close {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--bg-muted);
+      color: var(--text);
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 8px 12px;
+      font-size: 0.88rem;
+      margin-bottom: 16px;
+    }
+
+    .detail-grid .k {
+      color: var(--text-faint);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      padding-top: 2px;
+    }
+
+    .detail-grid .v {
+      word-break: break-word;
+    }
+
+    .pane-block {
+      background: #0d1117;
+      color: #c9d1d9;
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      line-height: 1.4;
+      padding: 12px 14px;
+      border-radius: 8px;
+      overflow: auto;
+      max-height: 320px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .pane-missing {
+      background: var(--bg-muted);
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      color: var(--text-muted);
+      font-size: 0.88rem;
+    }
+
+    .preview-block {
+      background: var(--bg-muted);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 0.88rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 160px;
+      overflow: auto;
+    }
+
+    footer.note {
+      margin-top: 8px;
+      color: var(--text-faint);
+      font-size: 0.78rem;
+      text-align: center;
+    }
+
+    @media (max-width: 640px) {
+      body { padding: 14px 12px 32px; }
+      .stats-row { grid-template-columns: 1fr; }
+      .bar-row { grid-template-columns: 80px 1fr 52px; }
+      .feed-item { grid-template-columns: 56px 1fr; }
+      .detail-grid { grid-template-columns: 1fr; gap: 2px 0; }
+      .detail-grid .k { margin-top: 6px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <h1>Muster Fleet Dashboard</h1>
+    <div class="meta">
+      <span id="poll-status"><span class="poll-dot" id="poll-dot"></span>connecting…</span>
+      <span id="last-updated">—</span>
+      <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle color theme">Theme</button>
+    </div>
+  </header>
+
+  <div id="error-banner" class="error-banner" style="display:none" role="alert"></div>
+
+  <section aria-labelledby="fleet-heading">
+    <h2 id="fleet-heading">Fleet overview</h2>
+    <div class="legend" role="group" aria-label="Agent status legend">
+      <span class="legend-item"><span class="status-dot live" aria-hidden="true"></span> live — seen within ~60s</span>
+      <span class="legend-item"><span class="status-dot quiet" aria-hidden="true"></span> quiet — stale but present</span>
+      <span class="legend-item"><span class="status-dot departed" aria-hidden="true"></span> departed — offline / gone</span>
+    </div>
+    <div id="agent-grid" class="agent-grid"></div>
+    <div id="token-bars" class="token-bars" style="display:none"></div>
+  </section>
+
+  <section aria-labelledby="tasks-heading">
+    <h2 id="tasks-heading">Task board</h2>
+    <div id="kanban" class="kanban"></div>
+  </section>
+
+  <section aria-labelledby="feed-heading">
+    <h2 id="feed-heading">Activity feed</h2>
+    <div id="feed" class="feed"></div>
+  </section>
+
+  <footer class="note">Polling <code>/api/status</code> every 3s · same-origin</footer>
+
+  <div class="modal-backdrop" id="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-title" hidden>
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <h2 id="modal-title">Agent</h2>
+          <div class="agent-sub" id="modal-sub"></div>
+        </div>
+        <button type="button" class="modal-close" id="modal-close" aria-label="Close detail panel">×</button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <script>
+(function () {
+  "use strict";
+
+  var POLL_MS = 3000;
+  var LIVE_MS = 60 * 1000;
+  var QUIET_MS = 5 * 60 * 1000;
+  var TASK_STATUSES = [
+    "open",
+    "claimed",
+    "needs_info",
+    "blocked",
+    "completed",
+    "declined",
+    "cancelled"
+  ];
+  var STATUS_COLORS = {
+    open: "var(--col-open)",
+    claimed: "var(--col-claimed)",
+    needs_info: "var(--col-needs_info)",
+    blocked: "var(--col-blocked)",
+    completed: "var(--col-completed)",
+    declined: "var(--col-declined)",
+    cancelled: "var(--col-cancelled)"
+  };
+
+  var state = {
+    agents: [],
+    threads: [],
+    events: [],
+    selectedAlias: null,
+    lastPayloadKey: null
+  };
+
+  var el = {
+    pollDot: document.getElementById("poll-dot"),
+    pollStatus: document.getElementById("poll-status"),
+    lastUpdated: document.getElementById("last-updated"),
+    errorBanner: document.getElementById("error-banner"),
+    agentGrid: document.getElementById("agent-grid"),
+    tokenBars: document.getElementById("token-bars"),
+    kanban: document.getElementById("kanban"),
+    feed: document.getElementById("feed"),
+    backdrop: document.getElementById("modal-backdrop"),
+    modalTitle: document.getElementById("modal-title"),
+    modalSub: document.getElementById("modal-sub"),
+    modalBody: document.getElementById("modal-body"),
+    modalClose: document.getElementById("modal-close"),
+    themeToggle: document.getElementById("theme-toggle")
+  };
+
+  /* ---------- theme ---------- */
+  function initTheme() {
+    var saved = localStorage.getItem("muster-dashboard-theme");
+    if (saved === "light" || saved === "dark") {
+      document.documentElement.setAttribute("data-theme", saved);
+    }
+    updateThemeButton();
+  }
+
+  function updateThemeButton() {
+    var t = document.documentElement.getAttribute("data-theme");
+    if (t === "dark") el.themeToggle.textContent = "Light mode";
+    else if (t === "light") el.themeToggle.textContent = "Dark mode";
+    else el.themeToggle.textContent = "Theme";
+  }
+
+  el.themeToggle.addEventListener("click", function () {
+    var cur = document.documentElement.getAttribute("data-theme");
+    var next;
+    if (cur === "dark") next = "light";
+    else if (cur === "light") next = "dark";
+    else {
+      var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      next = prefersDark ? "light" : "dark";
+    }
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("muster-dashboard-theme", next);
+    updateThemeButton();
+  });
+
+  /* ---------- time helpers ---------- */
+  function parseTime(v) {
+    if (v == null || v === "") return null;
+    if (typeof v === "number") {
+      // muster ms epoch or unix seconds
+      if (v > 1e12) return v;
+      if (v > 1e9) return v * 1000;
+      return v;
+    }
+    var s = String(v);
+    var n = Number(s);
+    if (!isNaN(n) && s.trim() !== "") {
+      if (n > 1e12) return n;
+      if (n > 1e9) return n * 1000;
+    }
+    var d = Date.parse(s);
+    return isNaN(d) ? null : d;
+  }
+
+  function relTime(v, now) {
+    var t = parseTime(v);
+    if (t == null) return "—";
+    var diff = Math.max(0, (now || Date.now()) - t);
+    var sec = Math.floor(diff / 1000);
+    if (sec < 5) return "just now";
+    if (sec < 60) return sec + "s ago";
+    var min = Math.floor(sec / 60);
+    if (min < 60) return min + "m ago";
+    var hr = Math.floor(min / 60);
+    if (hr < 48) return hr + "h ago";
+    var day = Math.floor(hr / 24);
+    return day + "d ago";
+  }
+
+  function escapeHtml(s) {
+    if (s == null) return "";
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  /* ---------- status classification ---------- */
+  function classifyAgent(agent, now) {
+    // Prefer explicit live flag + last_seen window
+    var lastSeen = parseTime(agent.last_seen);
+    var age = lastSeen != null ? now - lastSeen : null;
+
+    if (agent.live === false) {
+      if (age != null && age < LIVE_MS) return "live";
+      if (age != null && age < QUIET_MS) return "quiet";
+      return "departed";
+    }
+
+    if (agent.live === true) {
+      if (age != null && age > QUIET_MS) return "departed";
+      if (age != null && age > LIVE_MS) return "quiet";
+      return "live";
+    }
+
+    // No live flag: derive from last_seen only
+    if (age == null) return "departed";
+    if (age <= LIVE_MS) return "live";
+    if (age <= QUIET_MS) return "quiet";
+    return "departed";
+  }
+
+  function isGrokAgent(agent) {
+    var mt = (agent.model_type || "").toLowerCase();
+    if (mt.indexOf("grok") !== -1) return true;
+    var src = agent.activity && agent.activity.source;
+    if (src === "grok_native_session" || src === "grok_npm") return true;
+    return false;
+  }
+
+  function hasTokens(agent) {
+    var t = agent.activity && agent.activity.tokens;
+    if (!t || typeof t !== "object") return false;
+    return (
+      t.input_tokens != null ||
+      t.output_tokens != null ||
+      t.cache_read_input_tokens != null ||
+      t.cache_creation_input_tokens != null
+    );
+  }
+
+  function totalTokens(tokens) {
+    if (!tokens) return 0;
+    return (
+      (Number(tokens.input_tokens) || 0) +
+      (Number(tokens.output_tokens) || 0) +
+      (Number(tokens.cache_creation_input_tokens) || 0) +
+      (Number(tokens.cache_read_input_tokens) || 0)
+    );
+  }
+
+  function formatTokens(n) {
+    if (n == null || isNaN(n)) return "—";
+    if (n >= 1e6) return (n / 1e6).toFixed(1) + "M";
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + "k";
+    return String(n);
+  }
+
+  /* ---------- render agents ---------- */
+  function renderAgents(agents, now) {
+    if (!agents || !agents.length) {
+      el.agentGrid.innerHTML = '<div class="empty-state">No agents reported yet.</div>';
+      el.tokenBars.style.display = "none";
+      return;
+    }
+
+    var html = agents.map(function (a) {
+      var st = classifyAgent(a, now);
+      var act = a.activity || {};
+      var task = a.current_task;
+      var taskHtml;
+      if (task && task.subject) {
+        taskHtml =
+          '<strong>' + escapeHtml(task.subject) + '</strong>' +
+          (task.status ? ' · ' + escapeHtml(task.status) : '');
+      } else {
+        taskHtml = '<span style="color:var(--text-faint)">No current task</span>';
+      }
+
+      var turnVal = act.turn_count != null ? String(act.turn_count) : "—";
+      var modelVal = act.model || a.model_type || "—";
+
+      var tokenTile;
+      var tokenNote = "";
+      if (hasTokens(a)) {
+        tokenTile = formatTokens(totalTokens(act.tokens));
+      } else if (isGrokAgent(a)) {
+        tokenTile = "n/a";
+        tokenNote =
+          '<div class="token-note">token usage: not available (Grok CLI doesn\'t expose this locally)</div>';
+      } else {
+        tokenTile = "—";
+      }
+
+      return (
+        '<article class="agent-card" tabindex="0" role="button" data-alias="' +
+        escapeHtml(a.alias) +
+        '" aria-label="Open details for ' +
+        escapeHtml(a.alias) +
+        '">' +
+        '<div class="agent-card-head">' +
+        '<div>' +
+        '<div class="agent-alias">' +
+        escapeHtml(a.alias) +
+        '<span class="machine-tag">' +
+        escapeHtml(a.machine || "?") +
+        "</span></div>" +
+        '<div class="agent-sub">' +
+        escapeHtml(a.role || "—") +
+        " · " +
+        escapeHtml(a.model_type || "—") +
+        " · seen " +
+        escapeHtml(relTime(a.last_seen, now)) +
+        "</div>" +
+        "</div>" +
+        '<span class="status-badge ' +
+        st +
+        '"><span class="status-dot ' +
+        st +
+        '" aria-hidden="true"></span>' +
+        st +
+        "</span>" +
+        "</div>" +
+        '<div class="task-line">' +
+        taskHtml +
+        "</div>" +
+        '<div class="stats-row">' +
+        '<div class="stat-tile"><div class="label">Turns</div><div class="value">' +
+        escapeHtml(turnVal) +
+        "</div></div>" +
+        '<div class="stat-tile"><div class="label">Model</div><div class="value" title="' +
+        escapeHtml(modelVal) +
+        '">' +
+        escapeHtml(modelVal) +
+        "</div></div>" +
+        '<div class="stat-tile"><div class="label">Tokens</div><div class="value">' +
+        escapeHtml(tokenTile) +
+        "</div></div>" +
+        "</div>" +
+        tokenNote +
+        "</article>"
+      );
+    }).join("");
+
+    el.agentGrid.innerHTML = html;
+
+    // Token comparison bars — only agents that actually have token data
+    var withTok = agents.filter(hasTokens);
+    if (!withTok.length) {
+      el.tokenBars.style.display = "none";
+      return;
+    }
+
+    var totals = withTok.map(function (a) {
+      return { alias: a.alias, total: totalTokens(a.activity.tokens) };
+    });
+    var max = Math.max.apply(
+      null,
+      totals.map(function (x) {
+        return x.total;
+      })
+    ) || 1;
+
+    el.tokenBars.style.display = "block";
+    el.tokenBars.innerHTML =
+      "<h3>Token usage (Claude agents only)</h3>" +
+      totals
+        .map(function (x) {
+          var pct = Math.round((x.total / max) * 100);
+          return (
+            '<div class="bar-row">' +
+            '<span class="name" title="' +
+            escapeHtml(x.alias) +
+            '">' +
+            escapeHtml(x.alias) +
+            "</span>" +
+            '<div class="bar-track"><div class="bar-fill" style="width:' +
+            pct +
+            '%"></div></div>' +
+            '<span class="bar-val">' +
+            formatTokens(x.total) +
+            "</span>" +
+            "</div>"
+          );
+        })
+        .join("");
+  }
+
+  /* ---------- kanban ---------- */
+  function renderKanban(threads, now) {
+    var tasks = (threads || []).filter(function (t) {
+      return t.kind === "task" || t.kind === "Task" || !t.kind;
+    });
+    // If kind is missing but status looks task-like, still include
+    tasks = (threads || []).filter(function (t) {
+      if (t.kind && String(t.kind).toLowerCase() !== "task") return false;
+      return true;
+    });
+    // Prefer explicit kind==task; if aggregator always sends kind, filter strictly
+    var strict = (threads || []).filter(function (t) {
+      return String(t.kind || "").toLowerCase() === "task";
+    });
+    if (strict.length || (threads || []).some(function (t) { return t.kind; })) {
+      tasks = strict;
+    } else {
+      tasks = threads || [];
+    }
+
+    var byStatus = {};
+    TASK_STATUSES.forEach(function (s) {
+      byStatus[s] = [];
+    });
+    tasks.forEach(function (t) {
+      var s = String(t.status || "open").toLowerCase();
+      if (!byStatus[s]) byStatus[s] = [];
+      byStatus[s].push(t);
+    });
+
+    el.kanban.innerHTML = TASK_STATUSES.map(function (s) {
+      var cards = byStatus[s] || [];
+      var cardsHtml;
+      if (!cards.length) {
+        cardsHtml = '<div class="empty-col">—</div>';
+      } else {
+        cardsHtml = cards
+          .map(function (t) {
+            return (
+              '<div class="task-card">' +
+              '<div class="subject">' +
+              escapeHtml(t.subject || "(no subject)") +
+              "</div>" +
+              '<div class="meta">' +
+              "<span>from " +
+              escapeHtml(t.from_agent || "—") +
+              "</span>" +
+              "<span>to " +
+              escapeHtml(t.to_target || t.to || "—") +
+              "</span>" +
+              "<span>" +
+              escapeHtml(relTime(t.updated_at || t.last_at, now)) +
+              "</span>" +
+              "</div></div>"
+            );
+          })
+          .join("");
+      }
+      return (
+        '<div class="kanban-col">' +
+        '<div class="kanban-col-head">' +
+        "<span><span class=\"swatch\" style=\"background:" +
+        (STATUS_COLORS[s] || "var(--text-faint)") +
+        '"></span>' +
+        escapeHtml(s.replace(/_/g, " ")) +
+        "</span>" +
+        '<span class="count">' +
+        cards.length +
+        "</span>" +
+        "</div>" +
+        '<div class="kanban-cards">' +
+        cardsHtml +
+        "</div></div>"
+      );
+    }).join("");
+  }
+
+  /* ---------- activity feed ---------- */
+  function renderFeed(events, now) {
+    var list = (events || []).slice();
+    // newest first if timestamps available
+    list.sort(function (a, b) {
+      var ta = parseTime(a.created_at || a.ts || a.at || a.time) || 0;
+      var tb = parseTime(b.created_at || b.ts || b.at || b.time) || 0;
+      return tb - ta;
+    });
+    list = list.slice(0, 80);
+
+    if (!list.length) {
+      el.feed.innerHTML = '<div class="empty-state">No recent events.</div>';
+      return;
+    }
+
+    el.feed.innerHTML = list
+      .map(function (e) {
+        var t = e.created_at || e.ts || e.at || e.time;
+        var who = e.agent || e.from_agent || "—";
+        var target = e.target || e.to_target || "";
+        var detail = e.detail || e.subject || e.body || "";
+        return (
+          '<div class="feed-item">' +
+          '<div class="feed-time">' +
+          escapeHtml(relTime(t, now)) +
+          "</div>" +
+          '<div class="feed-body">' +
+          '<span class="feed-kind">' +
+          escapeHtml(e.kind || "event") +
+          "</span>" +
+          '<span class="who">' +
+          escapeHtml(who) +
+          "</span>" +
+          (target
+            ? ' → <span class="who">' + escapeHtml(target) + "</span>"
+            : "") +
+          (detail
+            ? '<div class="feed-detail">' + escapeHtml(detail) + "</div>"
+            : "") +
+          "</div></div>"
+        );
+      })
+      .join("");
+  }
+
+  /* ---------- modal / drill-down ---------- */
+  function findAgent(alias) {
+    for (var i = 0; i < state.agents.length; i++) {
+      if (state.agents[i].alias === alias) return state.agents[i];
+    }
+    return null;
+  }
+
+  function openModal(alias) {
+    var a = findAgent(alias);
+    if (!a) return;
+    state.selectedAlias = alias;
+    renderModal(a);
+    el.backdrop.classList.add("open");
+    el.backdrop.hidden = false;
+    el.modalClose.focus();
+  }
+
+  function closeModal() {
+    state.selectedAlias = null;
+    el.backdrop.classList.remove("open");
+    el.backdrop.hidden = true;
+  }
+
+  function renderModal(a) {
+    var now = Date.now();
+    var st = classifyAgent(a, now);
+    var act = a.activity || {};
+
+    el.modalTitle.textContent = a.alias || "Agent";
+    el.modalSub.textContent =
+      (a.role || "—") +
+      " · " +
+      (a.model_type || "—") +
+      " · " +
+      (a.machine || "?") +
+      " · " +
+      st;
+
+    var tokenDetail;
+    if (hasTokens(a)) {
+      var t = act.tokens;
+      tokenDetail =
+        "in " +
+        formatTokens(t.input_tokens) +
+        " · out " +
+        formatTokens(t.output_tokens) +
+        " · cache+ " +
+        formatTokens(t.cache_creation_input_tokens) +
+        " · cache-read " +
+        formatTokens(t.cache_read_input_tokens) +
+        " · total " +
+        formatTokens(totalTokens(t));
+    } else if (isGrokAgent(a)) {
+      tokenDetail =
+        "token usage: not available (Grok CLI doesn't expose this locally)";
+    } else {
+      tokenDetail = "—";
+    }
+
+    var preview =
+      act.last_message_preview ||
+      (act.source === "none" ? "(no recent session activity)" : "—");
+
+    var paneHtml;
+    if (a.pane_snapshot != null && String(a.pane_snapshot).length > 0) {
+      paneHtml =
+        '<div class="pane-block">' + escapeHtml(a.pane_snapshot) + "</div>";
+    } else {
+      paneHtml =
+        '<div class="pane-missing">No live pane available (tmux not installed on this machine, or agent has no tmux pane). Expected for spoke agents right now.</div>';
+    }
+
+    el.modalBody.innerHTML =
+      '<div class="detail-grid">' +
+      '<div class="k">Status</div><div class="v"><span class="status-badge ' +
+      st +
+      '"><span class="status-dot ' +
+      st +
+      '"></span>' +
+      st +
+      "</span> · last seen " +
+      escapeHtml(relTime(a.last_seen, now)) +
+      "</div>" +
+      '<div class="k">Activity source</div><div class="v">' +
+      escapeHtml(act.source || "—") +
+      "</div>" +
+      '<div class="k">Last tool</div><div class="v">' +
+      escapeHtml(act.last_tool || "—") +
+      "</div>" +
+      '<div class="k">Turns</div><div class="v">' +
+      escapeHtml(act.turn_count != null ? String(act.turn_count) : "—") +
+      "</div>" +
+      '<div class="k">Model</div><div class="v">' +
+      escapeHtml(act.model || a.model_type || "—") +
+      "</div>" +
+      '<div class="k">Tokens</div><div class="v">' +
+      escapeHtml(tokenDetail) +
+      "</div>" +
+      '<div class="k">Current task</div><div class="v">' +
+      (a.current_task && a.current_task.subject
+        ? escapeHtml(a.current_task.subject) +
+          (a.current_task.status
+            ? " (" + escapeHtml(a.current_task.status) + ")"
+            : "")
+        : "—") +
+      "</div>" +
+      "</div>" +
+      "<h3 style=\"margin:0 0 8px;font-size:0.82rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.03em\">Last message preview</h3>" +
+      '<div class="preview-block">' +
+      escapeHtml(preview) +
+      "</div>" +
+      "<h3 style=\"margin:16px 0 8px;font-size:0.82rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.03em\">Pane snapshot</h3>" +
+      paneHtml;
+  }
+
+  el.agentGrid.addEventListener("click", function (e) {
+    var card = e.target.closest(".agent-card");
+    if (card) openModal(card.getAttribute("data-alias"));
+  });
+
+  el.agentGrid.addEventListener("keydown", function (e) {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    var card = e.target.closest(".agent-card");
+    if (!card) return;
+    e.preventDefault();
+    openModal(card.getAttribute("data-alias"));
+  });
+
+  el.modalClose.addEventListener("click", closeModal);
+  el.backdrop.addEventListener("click", function (e) {
+    if (e.target === el.backdrop) closeModal();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && el.backdrop.classList.contains("open")) {
+      closeModal();
+    }
+  });
+
+  /* ---------- full render ---------- */
+  function renderAll() {
+    var now = Date.now();
+    renderAgents(state.agents, now);
+    renderKanban(state.threads, now);
+    renderFeed(state.events, now);
+    if (state.selectedAlias) {
+      var a = findAgent(state.selectedAlias);
+      if (a) renderModal(a);
+      else closeModal();
+    }
+  }
+
+  function setPollOk(msg) {
+    el.pollDot.className = "poll-dot ok";
+    el.pollStatus.innerHTML =
+      '<span class="poll-dot ok" id="poll-dot"></span>' + escapeHtml(msg);
+    el.errorBanner.style.display = "none";
+  }
+
+  function setPollErr(msg) {
+    el.pollDot.className = "poll-dot err";
+    el.pollStatus.innerHTML =
+      '<span class="poll-dot err" id="poll-dot"></span>poll error';
+    el.errorBanner.style.display = "block";
+    el.errorBanner.textContent = msg;
+  }
+
+  /* ---------- fetch ---------- */
+  function applyPayload(data) {
+    state.agents = data.agents || [];
+    state.threads = data.threads || [];
+    state.events = data.events || data.recent_events || [];
+    renderAll();
+    el.lastUpdated.textContent =
+      "updated " + new Date().toLocaleTimeString();
+    setPollOk(
+      state.agents.length +
+        " agent" +
+        (state.agents.length === 1 ? "" : "s") +
+        " · poll 3s"
+    );
+  }
+
+  async function poll() {
+    try {
+      var res = await fetch("/api/status", {
+        headers: { Accept: "application/json" },
+        cache: "no-store"
+      });
+      if (!res.ok) {
+        throw new Error("HTTP " + res.status + " " + res.statusText);
+      }
+      var data = await res.json();
+      applyPayload(data);
+    } catch (err) {
+      setPollErr(
+        "Could not reach /api/status: " +
+          (err && err.message ? err.message : String(err)) +
+          ". Serve this page via the dashboard server (or any host that proxies /api/status)."
+      );
+    }
+  }
+
+  /* ---------- demo / offline fixture (only when opened as file or ?demo=1) ---------- */
+  function demoPayload() {
+    var now = Date.now();
+    return {
+      agents: [
+        {
+          alias: "chad-mac",
+          role: "operator",
+          model_type: "claude",
+          machine: "hub",
+          live: true,
+          last_seen: now - 8000,
+          current_task: { subject: "Integrate dashboard", status: "claimed" },
+          activity: {
+            source: "claude_transcript",
+            last_message_preview:
+              "Wiring aggregator merge of hub + spoke collector JSON into GET /api/status.",
+            last_tool: "Bash",
+            turn_count: 42,
+            model: "claude-sonnet-5",
+            tokens: {
+              input_tokens: 1200,
+              output_tokens: 3400,
+              cache_creation_input_tokens: 800,
+              cache_read_input_tokens: 120000
+            }
+          },
+          pane_snapshot: "chad-mac 0:claude* 1:bash-\n$ muster station\n[agents] 4 live\n>"
+        },
+        {
+          alias: "grok-remote",
+          role: "producer",
+          model_type: "grok",
+          machine: "spoke",
+          live: true,
+          last_seen: now - 15000,
+          current_task: {
+            subject: "Dashboard: frontend HTML/CSS/JS",
+            status: "claimed"
+          },
+          activity: {
+            source: "grok_native_session",
+            last_message_preview:
+              "Building single-file index.html for fleet dashboard.",
+            last_tool: "write",
+            turn_count: 12,
+            model: "grok-4.5"
+          },
+          pane_snapshot: null
+        },
+        {
+          alias: "claude-remot",
+          role: "producer",
+          model_type: "claude",
+          machine: "spoke",
+          live: false,
+          last_seen: now - 180000,
+          current_task: null,
+          activity: {
+            source: "none"
+          },
+          pane_snapshot: null
+        }
+      ],
+      threads: [
+        {
+          kind: "task",
+          status: "claimed",
+          subject: "Dashboard: frontend HTML/CSS/JS",
+          from_agent: "chad-mac",
+          to_target: "grok-remote",
+          updated_at: now - 60000
+        },
+        {
+          kind: "task",
+          status: "open",
+          subject: "Dashboard: spoke-side local collector",
+          from_agent: "chad-mac",
+          to_target: "grok-remote",
+          updated_at: now - 30000
+        },
+        {
+          kind: "task",
+          status: "completed",
+          subject: "Fleet task test",
+          from_agent: "chad-mac",
+          to_target: "grok-remote",
+          updated_at: now - 3600000
+        },
+        {
+          kind: "task",
+          status: "blocked",
+          subject: "Wire remote SSH tunnel",
+          from_agent: "grok-mbp",
+          to_target: "chad-mac",
+          updated_at: now - 900000
+        }
+      ],
+      events: [
+        {
+          kind: "task_claim",
+          agent: "grok-remote",
+          target: "thread:12",
+          detail: "claimed frontend task",
+          created_at: now - 120000
+        },
+        {
+          kind: "message",
+          agent: "chad-mac",
+          target: "grok-remote",
+          detail: "reassigned collector task",
+          created_at: now - 180000
+        },
+        {
+          kind: "agent_register",
+          agent: "grok-remote",
+          target: "",
+          detail: "registered as producer",
+          created_at: now - 240000
+        }
+      ]
+    };
+  }
+
+  var useDemo =
+    location.search.indexOf("demo=1") !== -1 ||
+    location.protocol === "file:";
+
+  initTheme();
+
+  if (useDemo) {
+    applyPayload(demoPayload());
+    setPollOk("demo data (file:// or ?demo=1) · poll paused");
+    el.lastUpdated.textContent =
+      "demo · " + new Date().toLocaleTimeString();
+  } else {
+    poll();
+    setInterval(poll, POLL_MS);
+  }
+})();
+  </script>
+</body>
+</html>
