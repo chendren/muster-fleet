@@ -114,42 +114,47 @@ def build_fleet_health():
 
 
 def build_showcase():
-    """Bounty race results + leader lease + barrier state from kv + showcase files."""
-    import glob
-    out = {"bounties": [], "leader": {}, "barrier": {}, "ts": time.time()}
+    """Arcade state: bounties, swarms, quorums, leader lease, barrier."""
+    out = {
+        "bounties": [],
+        "swarms": [],
+        "quorums": [],
+        "leader": {},
+        "barrier": {},
+        "ts": time.time(),
+    }
     show_dir = FLEET_DATA / "showcase"
     if show_dir.exists():
-        files = sorted(show_dir.glob("bounty-*.json"), key=lambda p: p.stat().st_mtime, reverse=True)[:5]
-        for f in files:
-            try:
-                out["bounties"].append(json.loads(f.read_text()))
-            except Exception:
-                pass
-    # leader kv
+        for pattern, key in (
+            ("bounty-*.json", "bounties"),
+            ("swarm-*.json", "swarms"),
+            ("quorum-*.json", "quorums"),
+        ):
+            files = sorted(
+                show_dir.glob(pattern),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True,
+            )[:5]
+            for f in files:
+                try:
+                    out[key].append(json.loads(f.read_text()))
+                except Exception:
+                    pass
     try:
         con = sqlite3.connect(str(MUSTER_DB))
         con.row_factory = sqlite3.Row
-        for key in ("leader.holder", "leader.term", "leader.lease_until", "leader.host",
-                    "barrier.1.arrived", "barrier.1.n", "barrier.1.agents", "barrier.1.released"):
-            row = con.execute("select key, value, updated_by, updated_at from kv where key=?", (key,)).fetchone()
-            if not row:
-                continue
-            if key.startswith("leader."):
-                out["leader"][key.split(".", 1)[1]] = row["value"]
-            else:
-                out["barrier"][key.split(".", 1)[1] if key.count(".")==1 else key.replace("barrier.1.", "")] = row["value"]
-        # fix barrier keys
-        out["barrier"] = {}
-        for row in con.execute("select key, value, updated_by, updated_at from kv where key like 'barrier.%' or key like 'leader.%'"):
+        for row in con.execute(
+            "select key, value, updated_by, updated_at from kv "
+            "where key like 'leader.%' or key like 'barrier.%' or key like 'quorum.%'"
+        ):
             k = row["key"]
             if k.startswith("leader."):
                 out["leader"][k[7:]] = row["value"]
-            else:
+            elif k.startswith("barrier."):
                 out["barrier"][k] = row["value"]
         con.close()
     except Exception as e:
         out["error"] = str(e)
-    # remaining lease
     try:
         until = float(out["leader"].get("lease_until") or 0)
         out["leader"]["remaining_s"] = max(0.0, until - time.time())

@@ -2143,20 +2143,41 @@
       <span class="hint">Demos that are meaningless with one agent — live bus races, barriers, leader leases</span>
     </div>
     <section>
-      <h3>Leader lease</h3>
-      <pre id="showcase-leader" class="mono-block">loading…</pre>
+      <h3>👑 Leader crown</h3>
+      <div id="showcase-crown" class="stats-row">
+        <div class="stat-tile"><div class="label">Holder</div><div class="value" id="showcase-crown-holder">—</div></div>
+        <div class="stat-tile"><div class="label">Term</div><div class="value" id="showcase-crown-term">—</div></div>
+        <div class="stat-tile"><div class="label">Lease remaining</div><div class="value" id="showcase-crown-remaining">—</div></div>
+      </div>
+      <details><summary class="hint">Raw JSON</summary><pre id="showcase-leader" class="mono-block">loading…</pre></details>
     </section>
     <section>
-      <h3>Latest bounty races</h3>
-      <pre id="showcase-bounties" class="mono-block">loading…</pre>
+      <h3>🏆 Bounty leaderboard (atomic claim)</h3>
+      <table class="requests-table" id="showcase-bounty-table">
+        <thead><tr><th>Claimer</th><th>Wins</th><th>Latest race</th></tr></thead>
+        <tbody><tr><td colspan="3">loading…</td></tr></tbody>
+      </table>
+      <details><summary class="hint">Raw JSON</summary><pre id="showcase-bounties" class="mono-block">loading…</pre></details>
     </section>
     <section>
-      <h3>Barrier</h3>
+      <h3>🐝 Swarms</h3>
+      <div id="showcase-swarm-summary" class="hint">loading…</div>
+      <details><summary class="hint">Raw JSON</summary><pre id="showcase-swarms" class="mono-block">loading…</pre></details>
+    </section>
+    <section>
+      <h3>✅ Quorum commits</h3>
+      <div id="showcase-quorum-summary" class="hint">loading…</div>
+      <details><summary class="hint">Raw JSON</summary><pre id="showcase-quorums" class="mono-block">loading…</pre></details>
+    </section>
+    <section>
+      <h3>🚧 Barrier</h3>
       <pre id="showcase-barrier" class="mono-block">loading…</pre>
     </section>
     <p class="hint">CLI: <code>python3 fleet/showcase/bounty_race.py -n 3 --wait</code> ·
       <code>python3 fleet/showcase/leader_lease.py --alias X</code> ·
-      <code>python3 fleet/showcase/barrier.py --alias X -n 3</code></p>
+      <code>python3 fleet/showcase/barrier.py --alias X -n 3</code> ·
+      <code>python3 fleet/showcase/swarm.py --alias X</code> ·
+      <code>python3 fleet/showcase/quorum.py --alias X -k 2 -n 3</code></p>
   </div>
 
 <footer class="note">Polling <code>/api/status</code> every 3s · live terminal open → <code>/api/pane</code> every 1s · fleet extras (<code>discovery</code>/<code>llm</code>/<code>mesh</code>/<code>router</code>) every 8s · same-origin</footer>
@@ -5411,6 +5432,12 @@
   }
 })();
   
+  function escHtml(s) {
+    return String(s).replace(/[&<>"']/g, function(c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
   async function refreshShowcase() {
     try {
       const r = await fetch('/api/showcase');
@@ -5421,7 +5448,57 @@
       const A = document.getElementById('showcase-barrier');
       if (L) L.textContent = JSON.stringify(d.leader || {}, null, 2);
       if (B) B.textContent = JSON.stringify(d.bounties || [], null, 2);
+      const S = document.getElementById('showcase-swarms');
+      const Q = document.getElementById('showcase-quorums');
+      if (S) S.textContent = JSON.stringify(d.swarms || [], null, 2);
+      if (Q) Q.textContent = JSON.stringify(d.quorums || [], null, 2);
       if (A) A.textContent = JSON.stringify(d.barrier || {}, null, 2);
+
+      const leader = d.leader || {};
+      const hEl = document.getElementById('showcase-crown-holder');
+      const tEl = document.getElementById('showcase-crown-term');
+      const rEl = document.getElementById('showcase-crown-remaining');
+      if (hEl) hEl.textContent = leader.holder || 'none';
+      if (tEl) tEl.textContent = leader.term != null ? leader.term : '—';
+      if (rEl) {
+        const rem = Number(leader.remaining_s);
+        rEl.textContent = Number.isFinite(rem) ? Math.max(0, rem).toFixed(1) + 's' : '—';
+      }
+
+      const bounties = d.bounties || [];
+      const wins = {};
+      let latestClaimer = null, latestTs = -1, latestRace = null;
+      bounties.forEach(function(race) {
+        (race.results || []).forEach(function(res) {
+          if (res.claimer) {
+            wins[res.claimer] = (wins[res.claimer] || 0) + 1;
+            if (res.claimed_at > latestTs) { latestTs = res.claimed_at; latestClaimer = res.claimer; latestRace = race.race_id; }
+          }
+        });
+      });
+      const bTbody = document.querySelector('#showcase-bounty-table tbody');
+      if (bTbody) {
+        const rows = Object.keys(wins).sort(function(a, b) { return wins[b] - wins[a]; });
+        bTbody.innerHTML = rows.length ? rows.map(function(name) {
+          const isLatest = name === latestClaimer;
+          return '<tr><td>' + escHtml(name) + (isLatest ? ' 🔥' : '') + '</td><td>' + wins[name] + '</td><td>' +
+            (isLatest ? escHtml(latestRace || '') : '') + '</td></tr>';
+        }).join('') : '<tr><td colspan="3">no bounty claims yet</td></tr>';
+      }
+
+      const swarms = d.swarms || [];
+      const swarmEl = document.getElementById('showcase-swarm-summary');
+      if (swarmEl) {
+        swarmEl.textContent = swarms.length
+          ? swarms.length + ' swarm(s) — latest ' + swarms[0].swarm_id + ' (' + swarms[0].n + ' tasks)'
+          : 'no swarms yet';
+      }
+
+      const quorums = d.quorums || [];
+      const quorumEl = document.getElementById('showcase-quorum-summary');
+      if (quorumEl) {
+        quorumEl.textContent = quorums.length ? quorums.length + ' quorum commit(s) recorded' : 'no quorum commits yet';
+      }
     } catch (e) {}
   }
   setInterval(function(){ if (document.getElementById('view-showcase') && !document.getElementById('view-showcase').hidden) refreshShowcase(); }, 3000);

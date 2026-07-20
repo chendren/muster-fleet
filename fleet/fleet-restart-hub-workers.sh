@@ -18,7 +18,7 @@ fi
 # Global cleanup of stuck npm grok -p zombies + old loops.
 # Kill by pidfile / exact script path — never `pkill -f fleet-nudge` from a
 # wrapper whose argv contains that string (it suicides the restart shell).
-for a in grok-hub-a grok-hub-b grok-hub-c; do
+for a in grok-hub-a grok-hub-b grok-hub-c grok-hub-d; do
   if [ -f "/tmp/muster-loop-$a.pid" ]; then
     old=$(cat "/tmp/muster-loop-$a.pid" 2>/dev/null || true)
     if [ -n "${old:-}" ]; then
@@ -36,13 +36,13 @@ pgrep -f '/.npm-global/bin/grok -p' 2>/dev/null | while read -r p; do
 done
 sleep 1
 
-for a in grok-hub-a grok-hub-b grok-hub-c; do
+for a in grok-hub-a grok-hub-b grok-hub-c grok-hub-d; do
   echo "=== restart $a ==="
   "$SPAWN" grok hub "$a" worker
 done
 
 echo "=== pids ==="
-for a in grok-hub-a grok-hub-b grok-hub-c; do
+for a in grok-hub-a grok-hub-b grok-hub-c grok-hub-d; do
   printf '%s: ' "$a"
   cat "/tmp/muster-loop-$a.pid" 2>/dev/null || echo missing
 done

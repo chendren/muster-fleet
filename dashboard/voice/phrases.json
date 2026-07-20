@@ -1,0 +1,148 @@
+{
+  "version": 2,
+  "description": "Computer voice phrase bank for Muster Fleet Dashboard. Star Trek tone: short, decisive, no macOS say.",
+  "default_voice": "af_bella",
+  "phrases": {
+    "on_screen": {
+      "id": "on_screen",
+      "text": "On screen.",
+      "use": "After open_view, open_terminal, focus_*, or explicit on_screen tool"
+    },
+    "acknowledged": {
+      "id": "acknowledged",
+      "text": "Acknowledged.",
+      "use": "Default success ACK when a command is accepted and run"
+    },
+    "working": {
+      "id": "working",
+      "text": "Working.",
+      "use": "Long-running or multi-step commands; pipeline in progress"
+    },
+    "unable_to_comply": {
+      "id": "unable_to_comply",
+      "text": "Unable to comply.",
+      "use": "Unknown command, missing target, or tool failure"
+    },
+    "standing_by": {
+      "id": "standing_by",
+      "text": "Standing by.",
+      "use": "Idle ready state; clear_focus complete"
+    },
+    "affirmative": {
+      "id": "affirmative",
+      "text": "Affirmative.",
+      "use": "Yes/confirm style acceptance"
+    },
+    "negative": {
+      "id": "negative",
+      "text": "Negative.",
+      "use": "Refuse or filter clears nothing"
+    },
+    "specified_target_not_found": {
+      "id": "specified_target_not_found",
+      "text": "Specified target not found.",
+      "use": "Unknown agent alias or missing thread id"
+    },
+    "fleet_status_nominal": {
+      "id": "fleet_status_nominal",
+      "text": "Fleet status nominal.",
+      "use": "report_status / list_fleet when agents are live"
+    },
+    "accessing": {
+      "id": "accessing",
+      "text": "Accessing.",
+      "use": "STT received; brain routing"
+    },
+    "processing": {
+      "id": "processing",
+      "text": "Processing.",
+      "use": "LLM path (non fast-path) in progress"
+    },
+    "ready": {
+      "id": "ready",
+      "text": "Ready.",
+      "use": "POST /api/voice/status healthy; Computer panel open"
+    },
+    "transfer_complete": {
+      "id": "transfer_complete",
+      "text": "Transfer complete.",
+      "use": "View or focus successfully changed"
+    },
+    "filters_cleared": {
+      "id": "filters_cleared",
+      "text": "Filters cleared.",
+      "use": "clear_focus or clear filters"
+    },
+    "please_restate": {
+      "id": "please_restate",
+      "text": "Please restate your command.",
+      "use": "Empty STT transcript or low confidence"
+    },
+    "priority_override": {
+      "id": "priority_override",
+      "text": "Priority override acknowledged.",
+      "use": "Reserved for urgent operator commands"
+    },
+    "mesh_online": {
+      "id": "mesh_online",
+      "text": "Mesh online.",
+      "use": "GET /api/mesh healthy; open mesh view"
+    },
+    "fleet_health_report": {
+      "id": "fleet_health_report",
+      "text": "Fleet health report ready.",
+      "use": "After /api/fleet/health or report_status with health"
+    },
+    "timeline_updated": {
+      "id": "timeline_updated",
+      "text": "Timeline updated.",
+      "use": "Router route/complete writes timeline.jsonl"
+    },
+    "opening_dashboard": {
+      "id": "opening_dashboard",
+      "text": "Opening dashboard.",
+      "use": "scripts/open-dashboard.sh / open browser helper"
+    }
+  },
+  "speech_by_intent": {
+    "success": [
+      "Acknowledged.",
+      "On screen.",
+      "Affirmative.",
+      "Transfer complete."
+    ],
+    "progress": [
+      "Working.",
+      "Accessing.",
+      "Processing."
+    ],
+    "failure": [
+      "Unable to comply.",
+      "Specified target not found.",
+      "Negative."
+    ],
+    "idle": [
+      "Standing by.",
+      "Ready."
+    ],
+    "clarify": [
+      "Please restate your command."
+    ]
+  },
+  "tool_default_speech": {
+    "open_view": "On screen.",
+    "open_terminal": "On screen.",
+    "focus_agent": "Acknowledged.",
+    "focus_thread": "Acknowledged.",
+    "set_filter": "Acknowledged.",
+    "clear_focus": "Standing by.",
+    "list_fleet": "Fleet status nominal.",
+    "report_status": "Fleet status nominal.",
+    "on_screen": "On screen."
+  },
+  "notes": [
+    "Primary TTS: Kokoro-ONNX via tts_kokoro.py (never /usr/bin/say or speechSynthesis as primary).",
+    "brain.py should prefer these exact short strings for the speech field.",
+    "UI phrase strip should highlight WORKING / ON SCREEN / ACKNOWLEDGED from this bank."
+  ]
+}

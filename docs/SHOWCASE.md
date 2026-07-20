@@ -1,87 +1,90 @@
 # Muster Distributed-Systems Arcade
 
-**Why this exists:** Static fan-out proofs (one task per agent, stamp a file)
-prove the bus works — but a skeptic can still say “that’s a job queue.” The
-demos below are **canonical multi-agent phenomena**: they are **mathematically
-meaningless with one participant**. That is the pitch muster docs were missing.
+**Why this exists:** Stamp proofs show the bus works — skeptics still say
+“job queue.” These demos are **canonical multi-agent phenomena** that are
+**meaningless with one participant**.
 
-Synthesized from three top-model brainstorm agents:
-
-| Agent | Model | Output |
-|-------|--------|--------|
-| `brainstorm-opus` | Claude Opus (`--effort max`) | `docs/brainstorm/brainstorm-opus.md` |
-| `brainstorm-sonnet` | Claude Sonnet (`--effort high`) | `docs/brainstorm/brainstorm-sonnet.md` |
-| `brainstorm-grok` | Grok-4 (re-run / partial) | `docs/brainstorm/` |
-
-Opus framed the collection as the **Muster Distributed-Systems Arcade**.
-Sonnet ranked **Bounty Race** (atomic claim) as the purest instant demo.
+Brainstorm sources: `docs/brainstorm/` (Opus max, Sonnet high, Grok-4).
 
 ---
 
-## Shipped tonight (runnable)
-
-### 1. Bounty Race — atomic claim showdown
-
-Multiple identical tasks hit `role:worker`. Every live worker tries
-`task_claim`; **exactly one wins per bounty**. Multi-claimer leaderboard
-proves a real race.
+## Quick operator entry
 
 ```bash
-# Fleet must be draining (hub loops + TUI nudge)
-python3 fleet/showcase/bounty_race.py -n 3 --wait
-# → ~/.local/share/muster-fleet/showcase/bounty-*.json
-curl -s localhost:8787/api/showcase | python3 -m json.tool | head -80
+# Fleet ready?
+fleet/fleet-status.sh          # or: fleet-status after install
+
+# Run the full suite (needs live hub workers)
+sh fleet/showcase/run_all.sh
+
+# Dashboard
+open http://localhost:8787/    # Showcase tab
+curl -s localhost:8787/api/showcase | python3 -m json.tool | head
 ```
-
-**One agent?** One claimer, no drama. **Many agents?** Distinct claimers on
-the leaderboard — that *is* the demo.
-
-### 2. Leader lease (raft-lite MVP)
-
-```bash
-# Terminal A
-python3 fleet/showcase/leader_lease.py --alias elect-a --lease 15
-# Terminal B (or another host with bus access)
-python3 fleet/showcase/leader_lease.py --alias elect-b --lease 15
-# Kill the leader process; watch crown move via:
-python3 fleet/showcase/leader_lease.py --alias watch --once
-curl -s localhost:8787/api/showcase | jq .leader
-```
-
-### 3. Fleet barrier
-
-```bash
-# Need -n participants. With n=3 and only 2 arrive, it hangs — intentional.
-python3 fleet/showcase/barrier.py --alias a -n 3 --gen demo1 &
-python3 fleet/showcase/barrier.py --alias b -n 3 --gen demo1 &
-# wait… then start the third and watch simultaneous release
-python3 fleet/showcase/barrier.py --alias c -n 3 --gen demo1
-```
-
-### Dashboard
-
-Open **Showcase** tab on `http://localhost:8787/` — polls `GET /api/showcase`
-for leader lease, latest bounty races, barrier kv.
 
 ---
 
-## Ideas still on the backlog (from brainstorms)
+## Demos (all under `fleet/showcase/`)
 
-| Idea | Source | Why it hits hard |
-|------|--------|------------------|
-| Full muster-raft kill-to-failover crown on Terminals wall | Opus #1 | Crown jumps Mac when you kill a pane |
-| Quorum commit (K-of-N) | Opus #2 | Abort below quorum — fleet refuses to lie |
-| Dining philosophers deadlock | Opus #3 | `task_claim` as cross-machine forks |
-| Work-stealing swarm + kill-and-heal | Opus #4 / Sonnet chaos | Survivors absorb backlog |
-| Ghost Hands relay one-command | Sonnet #3 | Proof.md productized |
-| Sealed-bid auction router | Sonnet #2 | Fleet negotiates assignment |
-| Parallel incident war room | Sonnet #5 | Multi-voice triage thread |
+| Demo | Command | Fails with 1 agent? |
+|------|---------|---------------------|
+| **Bounty race** | `python3 fleet/showcase/bounty_race.py -n 3 --wait` | No race / one claimer |
+| **Swarm** | `python3 fleet/showcase/swarm.py -n 12 --wait` | Serial for-loop |
+| **Quorum** | `python3 fleet/showcase/quorum.py propose -k 2 -n 3` | Cannot form multi-voter quorum |
+| **Barrier** | `python3 fleet/showcase/barrier.py --alias X -n 3 --gen g1` | Hang forever if anyone missing |
+| **Leader lease** | `python3 fleet/showcase/leader_lease.py --alias X` | Uncontested crown |
+| **Failover** | `sh fleet/showcase/failover_demo.sh` | No second node to take crown |
+| **Ghost Hands relay** | `sh fleet/showcase/relay.sh start` then `verify` | No spoke hop |
+| **Run all** | `sh fleet/showcase/run_all.sh` | — |
+
+### 1. Bounty race — atomic claim showdown
+
+N identical tasks to `role:worker`. First `task_claim` wins each.
+
+**Proof (live):** 3 bounties → claimers `grok-hub-a`, `grok-hub-b`, `grok-hub-c`.
+
+### 2. Competitive swarm
+
+Dump many tasks; leaderboard shows work-stealing distribution.
+
+### 3. Quorum commit
+
+K-of-N votes in `kv`; below K → ABORT. COORD writes `quorum.<id>.status`.
+
+### 4. Fleet barrier
+
+Per-agent markers `barrier.<gen>.by.<alias>`; release when count ≥ N.
+
+### 5. Leader lease + failover
+
+`kv leader.*` lease; election via claimable term tasks.
+`failover_demo.sh` starts two electors, kills leader, shows crown move.
+
+### 6. Ghost Hands relay
+
+`relay.sh start` creates hop1 (hub) → hop2 (spoke) → hop3 (hub).
+`relay.sh verify` checks stamps + hop2 **not** on hub disk.
 
 ---
 
-## The framing to put on the homepage
+## Dashboard
 
-> Muster isn’t a chat multipass. It’s a **coordination substrate**: atomic
-> claims, shared kv, roles, broadcasts, and a live event journal. The Arcade
-> demos **election, barriers, and races** that **cannot exist with one agent**.
-> Close a terminal on one Mac; watch the bus heal on another.
+- Tab **Showcase** → polls `GET /api/showcase`
+- Fields: `leader`, `bounties`, `swarms`, `quorums`, `barrier`
+
+---
+
+## Fleet health
+
+```bash
+fleet/fleet-status.sh
+# loops a–d, nudge, :8787, :8790, llm mode, hub/spoke tmux, tunnel sock, smoke
+```
+
+`fleet-restart-hub-workers` restarts **a–d** + nudge.
+
+---
+
+## Backlog (stretch)
+
+Byzantine vote, dining philosophers, voice→router auction, split-brain tunnel cut.
