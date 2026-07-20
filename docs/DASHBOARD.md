@@ -35,7 +35,12 @@ be `source: "none"`. That is accurate, not a dashboard bug.
 | Endpoint | Role |
 |----------|------|
 | `GET /api/status` | Merged fleet payload (bus + collectors) |
-| `GET /api/pane/<alias>` | Live pane snapshot for drill-down |
+| `GET /api/pane?alias=` | Live pane snapshot for drill-down |
+| `GET /api/discovery` · `POST /api/discovery/scan` | Session auto-discovery |
+| `GET/POST /api/llm/mode` · `POST /api/llm/complete` | Local Ollama or **Cloud Haiku 4.5** ([`LLM_TOGGLE.md`](LLM_TOGGLE.md)) |
+| `GET /api/agentcore/health` · `POST /api/agentcore/invoke` | Local AgentCore emulator proxy |
+| `GET /api/router/requests` · `POST /api/router/route` · memory | Fleet router + context |
+| `GET /api/mesh` · `GET /api/fleet/health` | Mesh graph + process health |
 | `GET /api/voice/*` | Computer voice stack (see [`docs/VOICE.md`](VOICE.md)) |
 
 Data shape for collectors: [`dashboard/CONTRACT.md`](../dashboard/CONTRACT.md).

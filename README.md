@@ -17,8 +17,13 @@ around it.
 |-------|------------|-----|
 | Bus bridge | Hub `muster serve` + spoke SSH reverse unix-socket tunnel | this README § Architecture–§ Verify |
 | Fleet workers | Spawn Claude/Grok on hub or spoke; continuous inbox drain | [`docs/FLEET.md`](docs/FLEET.md) |
-| Dashboard | Live agents, tasks, collab sequence, terminal panes | [`docs/DASHBOARD.md`](docs/DASHBOARD.md) |
+| Dashboard | Live agents, mesh, terminals, requests/memory | [`docs/DASHBOARD.md`](docs/DASHBOARD.md) |
+| LLM toggle | **Local** Ollama or **Cloud** Claude Haiku 4.5 (subscription) | [`docs/LLM_TOGGLE.md`](docs/LLM_TOGGLE.md) |
+| Discovery | Auto-scan CLI/tmux sessions on hub (+ spoke scan) | `fleet/discovery/` |
+| AgentCore | Local Bedrock AgentCore-style runtime emulator | [`docs/AGENTCORE.md`](docs/AGENTCORE.md) |
+| Router | Route goals, track requests, memory/context | [`docs/ROUTER.md`](docs/ROUTER.md) |
 | Computer voice | Local Whisper + Ollama + Kokoro-ONNX (no macOS `say`) | [`docs/VOICE.md`](docs/VOICE.md) |
+| Epic / landed | Multi-machine platform enhancement plan + status | [`docs/EPIC-FLEET-ENHANCE.md`](docs/EPIC-FLEET-ENHANCE.md) |
 | War stories | Bugs we hit so you don’t re-derive them | [`PITFALLS.md`](PITFALLS.md) |
 
 `muster` itself is **local-only** by design: one unix-socket daemon, one
@@ -79,13 +84,22 @@ muster-fleet/
     FLEET.md                # spawn, drain, nudge, restart
     DASHBOARD.md            # operator UI
     VOICE.md                # Computer voice stack
+    LLM_TOGGLE.md           # local Ollama vs cloud Haiku 4.5
+    AGENTCORE.md            # local AgentCore emulator
+    ROUTER.md               # request router + memory
+    EPIC-FLEET-ENHANCE.md   # platform epic + landed checklist
   fleet/
     muster-spawn-tui.sh     # spawn Claude/Grok on hub|spoke
     fleet-restart-hub-workers.sh
     fleet-nudge-tui.sh      # keep TUI workers draining
+    discovery/              # auto-discovery of CLI sessions
+    llm/                    # local/cloud complete abstraction
+    agentcore/              # AgentCore runtime emulator (:8790)
+    router/                 # route / track / memory
+    acceptance/smoke.sh     # API smoke tests
   dashboard/
-    server.py               # aggregator + voice HTTP
-    frontend/index.html
+    server.py               # aggregator + voice + fleet APIs
+    frontend/index.html     # fleet / mesh / requests / memory / LLM toggle
     collectors/             # hub_local, spoke_local
     CONTRACT.md
     voice/                  # STT/LLM/TTS (see docs/VOICE.md)
@@ -114,8 +128,71 @@ muster-spawn-tui claude hub   hub-tui-claude worker
 muster-spawn-tui grok   spoke grok-spoke-a   worker
 muster-spawn-tui grok   spoke grok-spoke-b   worker
 
-# Dashboard
+# Dashboard (+ fleet APIs on :8787)
 python3 dashboard/server.py   # http://127.0.0.1:8787
+
+# Optional: AgentCore emulator
+fleet/agentcore/run.sh        # http://127.0.0.1:8790/health
+```
+
+### Local vs Cloud LLM (Claude Haiku 4.5)
+
+The dashboard and fleet services share a single LLM mode, persisted at
+`~/.local/share/muster-fleet/llm-mode.json`.
+
+| Mode | Backend | Model |
+|------|---------|--------|
+| `local` | Ollama `http://127.0.0.1:11434` | `qwen2.5:3b` (override with `FLEET_LOCAL_MODEL`) |
+| `cloud` | Claude Code CLI on the hub (`claude -p`) | **`claude-haiku-4-5-20251001`** (Claude Haiku 4.5) via **subscription** — no API key in repo |
+
+Cloud uses the same logged-in Claude Code subscription as interactive
+Claude on the hub (`claude login`), not a separate Anthropic API key file.
+
+```bash
+# Prefer cloud Haiku 4.5
+curl -s -X POST http://127.0.0.1:8787/api/llm/mode \
+  -H 'Content-Type: application/json' \
+  -d '{"mode":"cloud"}'
+
+# Prove mode
+curl -s http://127.0.0.1:8787/api/llm/mode
+# → {"mode":"cloud"}
+
+# Complete through the dashboard (uses cloud when mode=cloud)
+curl -s -X POST http://127.0.0.1:8787/api/llm/complete \
+  -H 'Content-Type: application/json' \
+  -d '{"prompt":"Reply with exactly: FLEET_CLOUD_TEST_OK"}'
+# → {"text":"FLEET_CLOUD_TEST_OK","mode":"cloud","latency_ms":...}
+
+# Prove the runtime model id (Claude Code JSON)
+claude -p --model claude-haiku-4-5-20251001 --output-format json \
+  'Reply with exactly: DIRECT_HAIKU_OK' \
+  | python3 -c "import sys,json; d=json.load(sys.stdin); print(list((d.get('modelUsage') or {}).keys()))"
+# → ['claude-haiku-4-5-20251001']
+```
+
+Full detail: [`docs/LLM_TOGGLE.md`](docs/LLM_TOGGLE.md).
+
+### Fleet platform APIs (dashboard `:8787`)
+
+| Method | Path | Role |
+|--------|------|------|
+| GET | `/api/status` | Merged fleet wall |
+| GET / POST | `/api/discovery` / `/api/discovery/scan` | Session discovery |
+| GET / POST | `/api/llm/mode` | `local` \| `cloud` |
+| POST | `/api/llm/complete` | Completion via active mode |
+| GET | `/api/agentcore/health` | Proxy to local emulator `:8790` |
+| POST | `/api/agentcore/invoke` | Invoke AgentCore emulator |
+| GET | `/api/router/requests` | Tracked routed requests |
+| POST | `/api/router/route` | Route a goal across the fleet |
+| GET / POST | `/api/router/memory…` | Context / memory store |
+| GET | `/api/mesh` | Machines → sessions → threads |
+| GET | `/api/fleet/health` | Loops, nudge, agentcore, llm mode |
+
+Smoke test:
+
+```bash
+fleet/acceptance/smoke.sh
 ```
 
 Prove drain (create tasks via muster MCP or CLI tooling) and expect stamp

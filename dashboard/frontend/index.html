@@ -1688,6 +1688,282 @@
       }
       .computer-toggle { right: 14px; bottom: 14px; }
     }
+
+    /* ========== EPIC-2: multi-machine grouping, mesh/requests/memory, LLM toggle, discovery badge ========== */
+    .header-tools {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 12px;
+    }
+    .discovery-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.72rem;
+      font-weight: 650;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: var(--bg-muted);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+    .discovery-badge.has-data { background: var(--live-bg); color: var(--live); border-color: transparent; }
+    .discovery-badge .n { font-variant-numeric: tabular-nums; }
+
+    .llm-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 3px;
+      box-shadow: var(--shadow);
+    }
+    .llm-toggle-label {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-faint);
+      padding: 0 4px 0 8px;
+    }
+    .llm-btn {
+      appearance: none;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font: inherit;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 5px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+    .llm-btn:hover { color: var(--text); background: var(--bg-muted); }
+    .llm-btn.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+    .llm-btn[disabled] { cursor: default; opacity: 0.5; }
+    .llm-offline-note {
+      font-size: 0.68rem;
+      color: var(--text-faint);
+      padding: 0 8px 0 2px;
+    }
+
+    /* Machine grouping strip (Fleet view) */
+    .machine-groups {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .machine-group-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 10px 12px;
+    }
+    .machine-group-card .mg-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .machine-group-card .mg-name {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: var(--text);
+    }
+    .machine-group-card .mg-count {
+      background: var(--bg-muted);
+      color: var(--text-muted);
+      padding: 1px 8px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 650;
+    }
+    .machine-group-card.hub .mg-name { color: var(--accent); }
+    .machine-group-card.spoke .mg-name { color: var(--live); }
+    .machine-group-card.unknown .mg-name { color: var(--text-faint); }
+    .machine-group-card .mg-aliases {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+    }
+    .machine-group-card .mg-note {
+      margin-top: 6px;
+      font-size: 0.68rem;
+      color: var(--text-faint);
+      font-style: italic;
+    }
+
+    /* Offline / not-yet-available panel notice */
+    .offline-notice {
+      background: var(--bg-muted);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    .offline-notice .endpoint {
+      display: block;
+      margin-top: 6px;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--text-faint);
+    }
+
+    /* Mesh view */
+    .mesh-machines {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    .mesh-machine-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px 16px;
+    }
+    .mesh-machine-card h3 {
+      margin: 0 0 8px;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: var(--text);
+    }
+    .mesh-session-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.82rem;
+    }
+    .mesh-session-row:last-child { border-bottom: none; }
+    .mesh-session-row .mesh-alias { font-weight: 600; }
+    .mesh-session-row .mesh-status {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      color: var(--text-faint);
+    }
+    .mesh-threads {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .mesh-thread-row {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr 100px;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.8rem;
+    }
+    .mesh-thread-row:last-child { border-bottom: none; }
+    .mesh-thread-row .arrow { color: var(--text-faint); text-align: center; }
+    .mesh-thread-row .subj { color: var(--text-muted); grid-column: 1 / -1; font-size: 0.76rem; margin-top: -2px; }
+    .mesh-source-tag {
+      display: inline-block;
+      font-size: 0.68rem;
+      color: var(--text-faint);
+      margin-left: 8px;
+    }
+
+    /* Requests panel */
+    .requests-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      font-size: 0.82rem;
+    }
+    .requests-table th {
+      text-align: left;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: var(--text-faint);
+      padding: 8px 12px;
+      background: var(--bg-muted);
+      border-bottom: 1px solid var(--border);
+    }
+    .requests-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+    .requests-table tr:last-child td { border-bottom: none; }
+
+    /* Memory panel */
+    .memory-lookup {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .memory-lookup input[type="text"] {
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 7px 10px;
+      font: inherit;
+      font-size: 0.85rem;
+      min-width: 220px;
+      flex: 1;
+    }
+    .memory-keys {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+    .memory-key-chip {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      color: var(--text-muted);
+      font: inherit;
+      font-size: 0.76rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+    .memory-key-chip:hover { border-color: var(--accent); color: var(--accent); }
+    .memory-result {
+      background: var(--bg-muted);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 360px;
+      overflow: auto;
+    }
   </style>
 </head>
 <body>
@@ -1696,6 +1972,15 @@
     <div class="meta">
       <span id="poll-status"><span class="poll-dot" id="poll-dot"></span>connecting…</span>
       <span id="last-updated">—</span>
+      <div class="header-tools">
+        <span class="discovery-badge" id="discovery-badge" title="GET /api/discovery">Discovery: n/a</span>
+        <div class="llm-toggle" id="llm-toggle">
+          <span class="llm-toggle-label">LLM</span>
+          <button type="button" class="llm-btn" id="llm-btn-local" data-mode="local" disabled>Local</button>
+          <button type="button" class="llm-btn" id="llm-btn-cloud" data-mode="cloud" disabled>Cloud · Haiku 4.5</button>
+          <span class="llm-offline-note" id="llm-offline-note">offline</span>
+        </div>
+      </div>
       <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle color theme">Theme</button>
     </div>
   </header>
@@ -1708,9 +1993,20 @@
     <button type="button" role="tab" class="active" data-view="fleet" id="tab-fleet" aria-selected="true">Fleet</button>
     <button type="button" role="tab" data-view="collab" id="tab-collab" aria-selected="false">Collaboration · sequence</button>
     <button type="button" role="tab" data-view="terminals" id="tab-terminals" aria-selected="false">Terminals only</button>
+    <button type="button" role="tab" data-view="mesh" id="tab-mesh" aria-selected="false">Mesh</button>
+    <button type="button" role="tab" data-view="requests" id="tab-requests" aria-selected="false">Requests</button>
+    <button type="button" role="tab" data-view="memory" id="tab-memory" aria-selected="false">Memory</button>
   </div>
 
   <div id="view-fleet" class="view-panel active" role="tabpanel">
+    <section aria-labelledby="machine-groups-heading">
+      <div class="section-head-row">
+        <h2 id="machine-groups-heading">Machines</h2>
+        <span class="hint">grouped from /api/status (machine field) · falls back to alias-naming heuristic</span>
+      </div>
+      <div id="machine-groups" class="machine-groups"></div>
+    </section>
+
     <section aria-labelledby="terminals-heading">
       <div class="section-head-row">
         <h2 id="terminals-heading">Live terminals</h2>
@@ -1792,7 +2088,54 @@
     </section>
   </div>
 
-  <footer class="note">Polling <code>/api/status</code> every 3s · live terminal open → <code>/api/pane</code> every 1s · same-origin</footer>
+  <div id="view-mesh" class="view-panel" role="tabpanel" hidden>
+    <div class="help-callout">
+      <strong>Mesh</strong> — machines → sessions → open threads between them. Sourced from
+      <code>GET /api/mesh</code> when available, otherwise derived live from <code>/api/status</code>.
+    </div>
+    <section aria-labelledby="mesh-machines-heading">
+      <div class="section-head-row">
+        <h2 id="mesh-machines-heading">Machines &amp; sessions</h2>
+        <span class="hint" id="mesh-source-hint">source: —</span>
+      </div>
+      <div id="mesh-machines" class="mesh-machines"></div>
+    </section>
+    <section aria-labelledby="mesh-threads-heading">
+      <h2 id="mesh-threads-heading">Open threads between sessions</h2>
+      <div id="mesh-threads" class="mesh-threads"></div>
+    </section>
+  </div>
+
+  <div id="view-requests" class="view-panel" role="tabpanel" hidden>
+    <div class="help-callout">
+      <strong>Router requests</strong> — tracked requests from <code>GET /api/router/requests</code>.
+    </div>
+    <section aria-labelledby="requests-heading">
+      <div class="section-head-row">
+        <h2 id="requests-heading">Requests</h2>
+        <span class="hint" id="requests-hint"></span>
+      </div>
+      <div id="requests-panel"></div>
+    </section>
+  </div>
+
+  <div id="view-memory" class="view-panel" role="tabpanel" hidden>
+    <div class="help-callout">
+      <strong>Memory inspector</strong> — look up a router memory key via
+      <code>GET /api/router/memory/:key</code>. Scopes: session, agent, fleet, request.
+    </div>
+    <section aria-labelledby="memory-heading">
+      <h2 id="memory-heading">Memory</h2>
+      <div class="memory-lookup">
+        <input type="text" id="memory-key-input" placeholder="memory key, e.g. fleet:last-summary" autocomplete="off" />
+        <button type="button" class="ghost" id="memory-lookup-btn">Lookup</button>
+      </div>
+      <div id="memory-keys" class="memory-keys"></div>
+      <div id="memory-panel"></div>
+    </section>
+  </div>
+
+  <footer class="note">Polling <code>/api/status</code> every 3s · live terminal open → <code>/api/pane</code> every 1s · fleet extras (<code>discovery</code>/<code>llm</code>/<code>mesh</code>/<code>router</code>) every 8s · same-origin</footer>
 
   <div class="modal-backdrop" id="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-title" hidden>
     <div class="modal" id="modal">
@@ -1876,7 +2219,14 @@
     fleetFilter: "all",
     agentQuery: "",
     focusAlias: null,
-    focusThreadId: null
+    focusThreadId: null,
+    // EPIC-2 extras — all defensive, all optional (absent backend = offline UI, never a throw)
+    discovery: null,
+    llmMode: null,
+    mesh: null,
+    requests: null,
+    memoryIndex: null,
+    memoryLookupResult: null
   };
 
   var el = {
@@ -1903,7 +2253,21 @@
     modalSub: document.getElementById("modal-sub"),
     modalBody: document.getElementById("modal-body"),
     modalClose: document.getElementById("modal-close"),
-    themeToggle: document.getElementById("theme-toggle")
+    themeToggle: document.getElementById("theme-toggle"),
+    machineGroups: document.getElementById("machine-groups"),
+    discoveryBadge: document.getElementById("discovery-badge"),
+    llmBtnLocal: document.getElementById("llm-btn-local"),
+    llmBtnCloud: document.getElementById("llm-btn-cloud"),
+    llmOfflineNote: document.getElementById("llm-offline-note"),
+    meshMachines: document.getElementById("mesh-machines"),
+    meshThreads: document.getElementById("mesh-threads"),
+    meshSourceHint: document.getElementById("mesh-source-hint"),
+    requestsPanel: document.getElementById("requests-panel"),
+    requestsHint: document.getElementById("requests-hint"),
+    memoryPanel: document.getElementById("memory-panel"),
+    memoryKeys: document.getElementById("memory-keys"),
+    memoryKeyInput: document.getElementById("memory-key-input"),
+    memoryLookupBtn: document.getElementById("memory-lookup-btn")
   };
 
   /* ---------- theme ---------- */
@@ -3208,7 +3572,7 @@
 
   function setView(name) {
     state.view = name;
-    ["fleet", "collab", "terminals"].forEach(function (v) {
+    ["fleet", "collab", "terminals", "mesh", "requests", "memory"].forEach(function (v) {
       var panel = document.getElementById("view-" + v);
       var tab = document.getElementById("tab-" + v);
       if (panel) {
@@ -3232,6 +3596,9 @@
         el.terminalWallFull.innerHTML = el.terminalWall.innerHTML;
       }
     }
+    if (name === "mesh") renderMesh();
+    if (name === "requests") renderRequests();
+    if (name === "memory") renderMemoryPanel();
   }
 
   document.querySelectorAll(".view-tabs button").forEach(function (btn) {
@@ -3538,6 +3905,7 @@
   function renderAll() {
     var now = Date.now();
     renderStats(state.agents, now);
+    renderMachineGroups(state.agents, now);
     // Apply fleet filters by temporarily wrapping renderAgents data
     var filtered = (state.agents || []).filter(function (a) {
       if (a.departed) return true; // departed group still built inside renderAgents
@@ -3588,6 +3956,343 @@
       '<span class="poll-dot err" id="poll-dot"></span>poll error';
     el.errorBanner.style.display = "block";
     el.errorBanner.textContent = msg;
+  }
+
+  /* ---------- EPIC-2: defensive fetch helper for not-yet-landed backend APIs ---------- */
+  // Never throws; always resolves. { ok:true, data } on 2xx JSON, otherwise
+  // { ok:false, status, error } — callers render an "offline"/"n/a" state
+  // instead of breaking the rest of the UI.
+  async function fetchJsonSafe(url, opts) {
+    try {
+      var res = await fetch(url, Object.assign({ cache: "no-store", headers: { Accept: "application/json" } }, opts || {}));
+      if (!res.ok) return { ok: false, status: res.status };
+      var data = await res.json().catch(function () { return null; });
+      if (data == null) return { ok: false, status: res.status };
+      return { ok: true, status: res.status, data: data };
+    } catch (err) {
+      return { ok: false, status: 0, error: err && err.message ? err.message : String(err) };
+    }
+  }
+
+  /* ---------- Multi-machine grouping (fleet view) ---------- */
+  // Prefer the "machine" field already resolved server-side in /api/status.
+  // If a discovery API supplies richer machine ids later, this still degrades
+  // gracefully to the naming heuristic below.
+  function resolveMachineGroup(agent) {
+    var m = (agent.machine || "").toLowerCase().trim();
+    if (m === "hub" || m === "spoke") return m;
+    if (m) return m; // future discovery may hand back named spokes, e.g. "spoke-a"
+    var alias = (agent.alias || "").toLowerCase();
+    if (/^grok-hub-/.test(alias) || /^hub-tui-/.test(alias) || /^hub-/.test(alias)) return "hub";
+    if (/^grok-spoke-/.test(alias) || /^spoke-tui-/.test(alias) || /^spoke-/.test(alias)) return "spoke";
+    return "unknown";
+  }
+
+  function machineGroupLabel(key) {
+    if (key === "hub") return "Hub · Mac Studio";
+    if (key === "spoke") return "Spoke · MacBook Pro";
+    if (key === "unknown") return "Unknown machine";
+    return key;
+  }
+
+  function renderMachineGroups(agents, now) {
+    if (!el.machineGroups) return;
+    var list = (agents || []).filter(function (a) { return !a.departed; });
+    if (!list.length) {
+      el.machineGroups.innerHTML = '<div class="empty-state" style="padding:10px">No agents reported yet.</div>';
+      return;
+    }
+    var groups = {};
+    var order = [];
+    list.forEach(function (a) {
+      var key = resolveMachineGroup(a);
+      if (!groups[key]) {
+        groups[key] = [];
+        order.push(key);
+      }
+      groups[key].push(a);
+    });
+    order.sort(function (a, b) {
+      var rank = { hub: 0, spoke: 1, unknown: 9 };
+      var ra = rank[a] != null ? rank[a] : 2;
+      var rb = rank[b] != null ? rank[b] : 2;
+      return ra - rb || a.localeCompare(b);
+    });
+    el.machineGroups.innerHTML = order.map(function (key) {
+      var members = groups[key];
+      var liveN = members.filter(function (a) { return classifyAgent(a, now) === "live"; }).length;
+      var aliases = members.map(function (a) { return displayName(a.alias); }).join(", ");
+      var heuristicUsed = !(members[0].machine === "hub" || members[0].machine === "spoke");
+      return (
+        '<div class="machine-group-card ' + escapeHtml(key) + '">' +
+        '<div class="mg-head"><span class="mg-name">' + escapeHtml(machineGroupLabel(key)) + '</span>' +
+        '<span class="mg-count">' + liveN + '/' + members.length + ' live</span></div>' +
+        '<div class="mg-aliases">' + escapeHtml(aliases) + '</div>' +
+        (heuristicUsed ? '<div class="mg-note">grouped by alias-naming heuristic (no machine field / discovery yet)</div>' : '') +
+        '</div>'
+      );
+    }).join("");
+  }
+
+  /* ---------- Discovery badge ---------- */
+  function renderDiscoveryBadge() {
+    if (!el.discoveryBadge) return;
+    var r = state.discovery;
+    if (!r || !r.ok) {
+      el.discoveryBadge.textContent = "Discovery: n/a";
+      el.discoveryBadge.classList.remove("has-data");
+      return;
+    }
+    var d = r.data || {};
+    var n = null;
+    if (Array.isArray(d.sessions)) n = d.sessions.length;
+    else if (Array.isArray(d.agents)) n = d.agents.length;
+    else if (typeof d.count === "number") n = d.count;
+    else if (Array.isArray(d)) n = d.length;
+    el.discoveryBadge.classList.add("has-data");
+    el.discoveryBadge.innerHTML = n != null
+      ? "Discovery: <span class=\"n\">" + n + "</span> sessions"
+      : "Discovery: online";
+  }
+
+  async function pollDiscovery() {
+    state.discovery = await fetchJsonSafe("/api/discovery");
+    renderDiscoveryBadge();
+  }
+
+  /* ---------- LLM local/cloud mode toggle ---------- */
+  function renderLlmToggle() {
+    if (!el.llmBtnLocal || !el.llmBtnCloud) return;
+    var r = state.llmMode;
+    var available = !!(r && r.ok);
+    var mode = available ? (r.data && r.data.mode) : null;
+    el.llmBtnLocal.disabled = !available;
+    el.llmBtnCloud.disabled = !available;
+    el.llmBtnLocal.classList.toggle("active", mode === "local");
+    el.llmBtnCloud.classList.toggle("active", mode === "cloud");
+    if (el.llmOfflineNote) el.llmOfflineNote.style.display = available ? "none" : "";
+  }
+
+  async function pollLlmMode() {
+    state.llmMode = await fetchJsonSafe("/api/llm/mode");
+    renderLlmToggle();
+  }
+
+  async function setLlmMode(mode) {
+    var r = await fetchJsonSafe("/api/llm/mode", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: mode })
+    });
+    if (r.ok) {
+      state.llmMode = r;
+    } else {
+      // Re-check current state rather than assuming failure means offline forever.
+      state.llmMode = await fetchJsonSafe("/api/llm/mode");
+    }
+    renderLlmToggle();
+  }
+
+  if (el.llmBtnLocal) el.llmBtnLocal.addEventListener("click", function () { setLlmMode("local"); });
+  if (el.llmBtnCloud) el.llmBtnCloud.addEventListener("click", function () { setLlmMode("cloud"); });
+
+  /* ---------- MESH view: machines -> sessions -> open threads ---------- */
+  function deriveMeshFromStatus() {
+    var now = Date.now();
+    var machines = {};
+    (state.agents || []).filter(function (a) { return !a.departed; }).forEach(function (a) {
+      var key = resolveMachineGroup(a);
+      if (!machines[key]) machines[key] = [];
+      machines[key].push({
+        alias: a.alias,
+        display: displayName(a.alias),
+        status: classifyAgent(a, now)
+      });
+    });
+    var openThreads = (state.threads || []).filter(function (t) {
+      var st = String(t.status || "").toLowerCase();
+      return ["open", "claimed", "needs_info", "blocked"].indexOf(st) >= 0;
+    }).map(function (t) {
+      return {
+        id: t.id,
+        from: t.from_agent || "?",
+        to: t.to_target || "?",
+        subject: t.subject || "",
+        status: t.status || t.kind || ""
+      };
+    });
+    return { machines: machines, threads: openThreads };
+  }
+
+  function renderMesh() {
+    if (!el.meshMachines || !el.meshThreads) return;
+    var r = state.mesh;
+    var usingApi = !!(r && r.ok && r.data);
+    var data;
+    if (usingApi) {
+      data = r.data;
+      if (!data.machines && !data.threads) {
+        // shape unknown/minimal — fall back to derived view but note the API answered
+        data = deriveMeshFromStatus();
+        usingApi = false;
+      }
+    } else {
+      data = deriveMeshFromStatus();
+    }
+    if (el.meshSourceHint) {
+      el.meshSourceHint.textContent = usingApi
+        ? "source: /api/mesh"
+        : "source: derived from /api/status (/api/mesh unavailable)";
+    }
+    var machines = data.machines || {};
+    var machineKeys = Object.keys(machines);
+    if (!machineKeys.length) {
+      el.meshMachines.innerHTML = '<div class="empty-state" style="padding:10px">No sessions yet.</div>';
+    } else {
+      machineKeys.sort();
+      el.meshMachines.innerHTML = machineKeys.map(function (key) {
+        var sessions = machines[key] || [];
+        var rows = sessions.map(function (s) {
+          return (
+            '<div class="mesh-session-row"><span class="mesh-alias">' + escapeHtml(s.display || s.alias) +
+            '</span><span class="mesh-status">' + escapeHtml(s.status || "") + '</span></div>'
+          );
+        }).join("") || '<div class="empty-state" style="padding:8px">No sessions</div>';
+        return (
+          '<div class="mesh-machine-card"><h3>' + escapeHtml(machineGroupLabel(key)) + ' · ' + sessions.length + '</h3>' + rows + '</div>'
+        );
+      }).join("");
+    }
+    var threads = data.threads || [];
+    el.meshThreads.innerHTML = threads.length
+      ? threads.map(function (t) {
+          return (
+            '<div class="mesh-thread-row">' +
+            '<span>' + escapeHtml(displayName(t.from) || t.from) + '</span>' +
+            '<span class="arrow">→</span>' +
+            '<span>' + escapeHtml(displayName(t.to) || t.to) + '</span>' +
+            '<span class="mesh-status">' + escapeHtml(t.status || "") + '</span>' +
+            (t.subject ? '<span class="subj">' + escapeHtml(t.subject) + '</span>' : '') +
+            '</div>'
+          );
+        }).join("")
+      : '<div class="empty-state" style="padding:16px">No open threads between sessions right now.</div>';
+  }
+
+  async function pollMesh() {
+    state.mesh = await fetchJsonSafe("/api/mesh");
+    if (state.view === "mesh") renderMesh();
+  }
+
+  /* ---------- REQUESTS panel ---------- */
+  function renderRequests() {
+    if (!el.requestsPanel) return;
+    var r = state.requests;
+    if (!r || !r.ok) {
+      if (el.requestsHint) el.requestsHint.textContent = "";
+      el.requestsPanel.innerHTML =
+        '<div class="offline-notice">Router requests API not yet available.' +
+        '<span class="endpoint">GET /api/router/requests</span></div>';
+      return;
+    }
+    var data = r.data;
+    var rows = Array.isArray(data) ? data : (data.requests || data.items || []);
+    if (el.requestsHint) el.requestsHint.textContent = rows.length + " tracked";
+    if (!rows.length) {
+      el.requestsPanel.innerHTML = '<div class="empty-state">No requests tracked yet.</div>';
+      return;
+    }
+    var html =
+      '<table class="requests-table"><thead><tr>' +
+      '<th>ID</th><th>From</th><th>To</th><th>Status</th><th>Updated</th>' +
+      '</tr></thead><tbody>' +
+      rows.slice(0, 200).map(function (req) {
+        return (
+          '<tr><td>' + escapeHtml(String(req.id != null ? req.id : "—")) + '</td>' +
+          '<td>' + escapeHtml(req.from || req.from_agent || "—") + '</td>' +
+          '<td>' + escapeHtml(req.to || req.to_agent || req.target || "—") + '</td>' +
+          '<td>' + escapeHtml(req.status || "—") + '</td>' +
+          '<td>' + escapeHtml(relTime(req.updated_at || req.ts, Date.now())) + '</td></tr>'
+        );
+      }).join("") +
+      '</tbody></table>';
+    el.requestsPanel.innerHTML = html;
+  }
+
+  async function pollRequests() {
+    state.requests = await fetchJsonSafe("/api/router/requests");
+    if (state.view === "requests") renderRequests();
+  }
+
+  /* ---------- MEMORY panel ---------- */
+  function renderMemoryPanel() {
+    if (!el.memoryPanel) return;
+    var idx = state.memoryIndex;
+    if (el.memoryKeys) {
+      if (idx && idx.ok && Array.isArray(idx.data && idx.data.keys)) {
+        el.memoryKeys.innerHTML = idx.data.keys.map(function (k) {
+          return '<button type="button" class="memory-key-chip" data-key="' + escapeHtml(k) + '">' + escapeHtml(k) + '</button>';
+        }).join("");
+        el.memoryKeys.querySelectorAll(".memory-key-chip").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            if (el.memoryKeyInput) el.memoryKeyInput.value = btn.getAttribute("data-key") || "";
+            lookupMemoryKey(btn.getAttribute("data-key"));
+          });
+        });
+      } else {
+        el.memoryKeys.innerHTML = "";
+      }
+    }
+    if (!state.memoryLookupResult) {
+      if (idx && idx.ok) {
+        el.memoryPanel.innerHTML = '<div class="empty-state">Enter a key above to inspect memory, or pick one listed.</div>';
+      } else {
+        el.memoryPanel.innerHTML =
+          '<div class="offline-notice">Router memory API not yet available (no key index).' +
+          '<span class="endpoint">GET /api/router/memory/:key · POST /api/router/memory</span></div>';
+      }
+    }
+  }
+
+  async function pollMemoryIndex() {
+    state.memoryIndex = await fetchJsonSafe("/api/router/memory");
+    if (state.view === "memory") renderMemoryPanel();
+  }
+
+  async function lookupMemoryKey(key) {
+    key = (key || "").trim();
+    if (!key || !el.memoryPanel) return;
+    el.memoryPanel.innerHTML = '<div class="empty-state">Looking up "' + escapeHtml(key) + '"…</div>';
+    var r = await fetchJsonSafe("/api/router/memory/" + encodeURIComponent(key));
+    if (!r.ok) {
+      state.memoryLookupResult = null;
+      el.memoryPanel.innerHTML =
+        '<div class="offline-notice">No memory found for <code>' + escapeHtml(key) + '</code> (or endpoint unavailable).' +
+        '<span class="endpoint">GET /api/router/memory/' + escapeHtml(key) + '</span></div>';
+      return;
+    }
+    state.memoryLookupResult = r.data;
+    el.memoryPanel.innerHTML = '<div class="memory-result">' + escapeHtml(JSON.stringify(r.data, null, 2)) + '</div>';
+  }
+
+  if (el.memoryLookupBtn) {
+    el.memoryLookupBtn.addEventListener("click", function () {
+      lookupMemoryKey(el.memoryKeyInput ? el.memoryKeyInput.value : "");
+    });
+  }
+  if (el.memoryKeyInput) {
+    el.memoryKeyInput.addEventListener("keydown", function (ev) {
+      if (ev.key === "Enter") lookupMemoryKey(el.memoryKeyInput.value);
+    });
+  }
+
+  var EXTRAS_POLL_MS = 8000;
+  function pollExtras() {
+    pollDiscovery();
+    pollLlmMode();
+    pollMesh();
+    pollRequests();
+    pollMemoryIndex();
   }
 
   /* ---------- fetch ---------- */
@@ -4677,6 +5382,8 @@
   } else {
     poll();
     setInterval(poll, POLL_MS);
+    pollExtras();
+    setInterval(pollExtras, EXTRAS_POLL_MS);
   }
 })();
   </script>

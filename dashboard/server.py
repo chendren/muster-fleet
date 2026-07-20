@@ -42,6 +42,7 @@ def _find_tmux():
 TMUX_BIN = _find_tmux()
 
 HERE = Path(__file__).resolve().parent
+REPO_ROOT = HERE.parent
 FRONTEND_DIR = HERE / "frontend"
 COLLECTORS_DIR = HERE / "collectors"
 
@@ -62,6 +63,91 @@ VOICE_MODELS = Path(os.environ.get(
     "MUSTER_VOICE_MODELS",
     str(Path.home() / ".local" / "share" / "muster-voice" / "models"),
 ))
+FLEET_DATA = Path.home() / ".local/share/muster-fleet"
+
+
+def _load_fleet_module(name, path):
+    """Load a fleet/*.py module by path (no package install required)."""
+    import importlib.util
+    path = Path(path)
+    spec = importlib.util.spec_from_file_location(name, str(path))
+    mod = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def build_fleet_health():
+    """Aggregate loop pids, nudge, tunnel, agentcore, llm mode."""
+    def pid_alive(pidfile):
+        try:
+            pid = int(Path(pidfile).read_text().strip())
+            os.kill(pid, 0)
+            return {"pid": pid, "alive": True}
+        except Exception:
+            return {"pid": None, "alive": False}
+
+    loops = {}
+    for a in ("grok-hub-a", "grok-hub-b", "grok-hub-c", "grok-hub-d"):
+        loops[a] = pid_alive(f"/tmp/muster-loop-{a}.pid")
+    agentcore = {"up": False}
+    try:
+        import urllib.request
+        with urllib.request.urlopen("http://127.0.0.1:8790/health", timeout=1) as r:
+            agentcore = {"up": True, "body": json.loads(r.read().decode())}
+    except Exception as e:
+        agentcore = {"up": False, "error": str(e)}
+    mode = "local"
+    try:
+        mode = _load_fleet_module("llm_complete", REPO_ROOT / "fleet/llm/complete.py").get_mode()
+    except Exception:
+        pass
+    return {
+        "hub_loops": loops,
+        "nudge": pid_alive("/tmp/muster-fleet-nudge.pid"),
+        "dashboard": pid_alive("/tmp/muster-dashboard.pid"),
+        "agentcore": agentcore,
+        "llm_mode": mode,
+        "ts": time.time(),
+    }
+
+
+def build_mesh():
+    """machines → sessions → open threads graph from bus.db + discovery."""
+    machines = {"hub": [], "spoke": [], "unknown": []}
+    # discovery file
+    disc = FLEET_DATA / "discovery.json"
+    sessions = []
+    if disc.exists():
+        try:
+            sessions = json.loads(disc.read_text()).get("sessions") or []
+        except Exception:
+            sessions = []
+    # classify by name heuristics
+    for s in sessions:
+        name = (s.get("name") or "").lower()
+        entry = {"name": s.get("name"), "type": s.get("type"), "machine": "unknown"}
+        if "spoke" in name or "mbp" in name:
+            entry["machine"] = "spoke"
+            machines["spoke"].append(entry)
+        elif "hub" in name or "macstudio" in name or name.startswith("grok-hub"):
+            entry["machine"] = "hub"
+            machines["hub"].append(entry)
+        else:
+            machines["unknown"].append(entry)
+    threads = []
+    try:
+        con = sqlite3.connect(str(MUSTER_DB))
+        con.row_factory = sqlite3.Row
+        for r in con.execute(
+            "select id, kind, status, from_agent, to_kind, to_target, subject "
+            "from threads order by id desc limit 40"
+        ):
+            threads.append(dict(r))
+        con.close()
+    except Exception as e:
+        threads = [{"error": str(e)}]
+    return {"machines": machines, "sessions": sessions, "threads": threads, "ts": time.time()}
 
 
 def capture_tmux_pane(pane_id):
@@ -876,6 +962,78 @@ class Handler(BaseHTTPRequestHandler):
         # Fast live-terminal endpoint — capture only this agent's pane so the
         # UI can refresh ~1s while a terminal is open without re-running
         # collectors/SSH for the whole fleet.
+        if path == "/api/agentcore/health":
+            try:
+                import urllib.request
+                with urllib.request.urlopen("http://127.0.0.1:8790/health", timeout=2) as r:
+                    data = json.loads(r.read().decode())
+                self._send_json({"proxy": "ok", "upstream": data})
+            except Exception as e:
+                self._send_json({"proxy": "error", "detail": str(e)}, status=502)
+            return
+
+        # --- fleet platform APIs (discovery / llm / router) ---
+        if path == "/api/discovery":
+            try:
+                p = Path.home() / ".local/share/muster-fleet/discovery.json"
+                if not p.exists():
+                    # live scan fallback
+                    import subprocess
+                    out = subprocess.check_output(
+                        ["python3", str(REPO_ROOT / "fleet/discovery/discover.py")],
+                        text=True, timeout=30,
+                    )
+                    self._send_json(json.loads(out))
+                else:
+                    self._send_json(json.loads(p.read_text()))
+            except Exception as e:
+                self._send_json({"error": str(e)}, status=500)
+            return
+
+        if path == "/api/llm/mode":
+            try:
+                mod = _load_fleet_module("llm_complete", REPO_ROOT / "fleet/llm/complete.py")
+                self._send_json({"mode": mod.get_mode()})
+            except Exception as e:
+                self._send_json({"error": str(e)}, status=500)
+            return
+
+        if path == "/api/router/requests":
+            try:
+                reqs = []
+                rf = Path.home() / ".local/share/muster-fleet/requests.jsonl"
+                if rf.exists():
+                    for line in rf.read_text().splitlines():
+                        if line.strip():
+                            reqs.append(json.loads(line))
+                self._send_json({"requests": reqs[-50:]})
+            except Exception as e:
+                self._send_json({"error": str(e)}, status=500)
+            return
+
+        if path.startswith("/api/router/memory/"):
+            try:
+                mod = _load_fleet_module("fleet_router", REPO_ROOT / "fleet/router/router.py")
+                key = path.rsplit("/", 1)[-1]
+                self._send_json({"key": key, "value": mod.get_memory(key)})
+            except Exception as e:
+                self._send_json({"error": str(e)}, status=500)
+            return
+
+        if path == "/api/fleet/health":
+            try:
+                self._send_json(build_fleet_health())
+            except Exception as e:
+                self._send_json({"error": str(e)}, status=500)
+            return
+
+        if path == "/api/mesh":
+            try:
+                self._send_json(build_mesh())
+            except Exception as e:
+                self._send_json({"error": str(e)}, status=500)
+            return
+
         if path == "/api/pane":
             alias = (query.get("alias") or "").strip()
             if not alias:
@@ -1127,15 +1285,107 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(result)
                 return
 
+            if path == "/api/discovery/scan":
+                try:
+                    out = subprocess.check_output(
+                        ["python3", str(REPO_ROOT / "fleet/discovery/discover.py")],
+                        text=True, timeout=30,
+                    )
+                    data = json.loads(out)
+                    FLEET_DATA.mkdir(parents=True, exist_ok=True)
+                    (FLEET_DATA / "discovery.json").write_text(json.dumps(data, indent=2))
+                    self._send_json(data)
+                except Exception as e:
+                    self._send_json({"error": str(e)}, status=500)
+                return
+
+            if path == "/api/llm/mode":
+                try:
+                    mod = _load_fleet_module("llm_complete", REPO_ROOT / "fleet/llm/complete.py")
+                    raw = self._read_body()
+                    data = json.loads(raw.decode("utf-8") or "{}")
+                    mode = data.get("mode")
+                    if mode not in ("local", "cloud"):
+                        self._send_json({"error": "mode must be local|cloud"}, status=400)
+                        return
+                    mod.set_mode(mode)
+                    self._send_json({"mode": mode})
+                except Exception as e:
+                    self._send_json({"error": str(e)}, status=500)
+                return
+
+            if path == "/api/llm/complete":
+                try:
+                    mod = _load_fleet_module("llm_complete", REPO_ROOT / "fleet/llm/complete.py")
+                    raw = self._read_body()
+                    data = json.loads(raw.decode("utf-8") or "{}")
+                    prompt = data.get("prompt", "")
+                    if not prompt:
+                        self._send_json({"error": "prompt required"}, status=400)
+                        return
+                    t0 = time.time()
+                    text = mod.complete(prompt)
+                    self._send_json({
+                        "text": text,
+                        "mode": mod.get_mode(),
+                        "latency_ms": int((time.time() - t0) * 1000),
+                    })
+                except Exception as e:
+                    self._send_json({"error": str(e)}, status=500)
+                return
+
+            if path == "/api/agentcore/invoke":
+                try:
+                    import urllib.request
+                    body = self._read_body() or b"{}"
+                    req = urllib.request.Request(
+                        "http://127.0.0.1:8790/invoke", data=body, method="POST",
+                    )
+                    req.add_header("Content-Type", "application/json")
+                    with urllib.request.urlopen(req, timeout=30) as r:
+                        data = json.loads(r.read().decode())
+                    self._send_json({"proxy": "ok", "result": data})
+                except Exception as e:
+                    self._send_json({"proxy": "error", "detail": str(e)}, status=502)
+                return
+
+            if path == "/api/router/route":
+                try:
+                    mod = _load_fleet_module("fleet_router", REPO_ROOT / "fleet/router/router.py")
+                    body = json.loads(self._read_body().decode("utf-8") or "{}")
+                    result = mod.route_goal(
+                        body.get("goal", ""),
+                        body.get("preferred_role"),
+                        body.get("preferred_machine"),
+                    )
+                    self._send_json(result)
+                except Exception as e:
+                    self._send_json({"error": str(e)}, status=500)
+                return
+
+            if path == "/api/router/memory":
+                try:
+                    mod = _load_fleet_module("fleet_router", REPO_ROOT / "fleet/router/router.py")
+                    body = json.loads(self._read_body().decode("utf-8") or "{}")
+                    mod.store_memory(
+                        body["key"], body.get("scope", "fleet"), body["value"],
+                    )
+                    self._send_json({"ok": True})
+                except Exception as e:
+                    self._send_json({"error": str(e)}, status=500)
+                return
+
             self._send_json({"error": "not found"}, status=404)
         except Exception as e:
             self._send_json({"error": str(e)}, status=500)
 
 
 def main():
+    ThreadingHTTPServer.allow_reuse_address = True
     server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
     print(f"muster fleet dashboard: http://localhost:{PORT}/", file=sys.stderr)
     print(f"  API:  http://localhost:{PORT}/api/status", file=sys.stderr)
+    print(f"  fleet APIs: /api/discovery /api/llm/* /api/agentcore/* /api/router/* /api/mesh /api/fleet/health", file=sys.stderr)
     server.serve_forever()
 
 
