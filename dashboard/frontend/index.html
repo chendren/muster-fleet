@@ -1996,6 +1996,7 @@
     <button type="button" role="tab" data-view="mesh" id="tab-mesh" aria-selected="false">Mesh</button>
     <button type="button" role="tab" data-view="requests" id="tab-requests" aria-selected="false">Requests</button>
     <button type="button" role="tab" data-view="memory" id="tab-memory" aria-selected="false">Memory</button>
+    <button type="button" role="tab" data-view="showcase" id="tab-showcase" aria-selected="false">Showcase</button>
   </div>
 
   <div id="view-fleet" class="view-panel active" role="tabpanel">
@@ -2135,7 +2136,30 @@
     </section>
   </div>
 
-  <footer class="note">Polling <code>/api/status</code> every 3s · live terminal open → <code>/api/pane</code> every 1s · fleet extras (<code>discovery</code>/<code>llm</code>/<code>mesh</code>/<code>router</code>) every 8s · same-origin</footer>
+  
+  <div id="view-showcase" class="view-panel" role="tabpanel" hidden>
+    <div class="section-head">
+      <h2>Muster Distributed-Systems Arcade</h2>
+      <span class="hint">Demos that are meaningless with one agent — live bus races, barriers, leader leases</span>
+    </div>
+    <section>
+      <h3>Leader lease</h3>
+      <pre id="showcase-leader" class="mono-block">loading…</pre>
+    </section>
+    <section>
+      <h3>Latest bounty races</h3>
+      <pre id="showcase-bounties" class="mono-block">loading…</pre>
+    </section>
+    <section>
+      <h3>Barrier</h3>
+      <pre id="showcase-barrier" class="mono-block">loading…</pre>
+    </section>
+    <p class="hint">CLI: <code>python3 fleet/showcase/bounty_race.py -n 3 --wait</code> ·
+      <code>python3 fleet/showcase/leader_lease.py --alias X</code> ·
+      <code>python3 fleet/showcase/barrier.py --alias X -n 3</code></p>
+  </div>
+
+<footer class="note">Polling <code>/api/status</code> every 3s · live terminal open → <code>/api/pane</code> every 1s · fleet extras (<code>discovery</code>/<code>llm</code>/<code>mesh</code>/<code>router</code>) every 8s · same-origin</footer>
 
   <div class="modal-backdrop" id="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-title" hidden>
     <div class="modal" id="modal">
@@ -5386,6 +5410,22 @@
     setInterval(pollExtras, EXTRAS_POLL_MS);
   }
 })();
-  </script>
+  
+  async function refreshShowcase() {
+    try {
+      const r = await fetch('/api/showcase');
+      if (!r.ok) return;
+      const d = await r.json();
+      const L = document.getElementById('showcase-leader');
+      const B = document.getElementById('showcase-bounties');
+      const A = document.getElementById('showcase-barrier');
+      if (L) L.textContent = JSON.stringify(d.leader || {}, null, 2);
+      if (B) B.textContent = JSON.stringify(d.bounties || [], null, 2);
+      if (A) A.textContent = JSON.stringify(d.barrier || {}, null, 2);
+    } catch (e) {}
+  }
+  setInterval(function(){ if (document.getElementById('view-showcase') && !document.getElementById('view-showcase').hidden) refreshShowcase(); }, 3000);
+
+</script>
 </body>
 </html>

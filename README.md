@@ -25,6 +25,7 @@ around it.
 | Computer voice | Local Whisper + Ollama + Kokoro-ONNX (no macOS `say`) | [`docs/VOICE.md`](docs/VOICE.md) |
 | Epic / landed | Multi-machine platform enhancement plan + status | [`docs/EPIC-FLEET-ENHANCE.md`](docs/EPIC-FLEET-ENHANCE.md) |
 | **Live proof** | Two machines + multi-TUI end-to-end verification | [`docs/PROOF.md`](docs/PROOF.md) |
+| **Arcade / showcase** | Races, barriers, leader leases that need multi-agent | [`docs/SHOWCASE.md`](docs/SHOWCASE.md) |
 | War stories | Bugs we hit so you don’t re-derive them | [`PITFALLS.md`](PITFALLS.md) |
 
 `muster` itself is **local-only** by design: one unix-socket daemon, one
@@ -237,6 +238,34 @@ proof=proof-20260719-233519 machine=spoke alias=grok-spoke-b ts=1784522156 ok
 
 Full write-up, bus thread ids, negative checks, and re-run steps:
 **[`docs/PROOF.md`](docs/PROOF.md)**.
+
+---
+
+## Why muster hits different (not “just a job queue”)
+
+Static stamp proofs show the bus works. Skeptics still shrug: *“that’s SSH +
+a queue.”* The **Distributed-Systems Arcade** demos are different — they run
+phenomena that are **meaningless with one agent**:
+
+| Demo | What you see | One agent? |
+|------|----------------|------------|
+| **Bounty race** | N workers race `task_claim`; leaderboard shows multiple winners | No race — one silent claim |
+| **Leader lease** | Crown in kv; kill leader → re-election | Uncontested forever — no failover story |
+| **Barrier** | All panes release together; hang if anyone’s missing | Barrier is a no-op |
+
+```bash
+# Multi-agent claim race (needs live workers with role=worker)
+python3 fleet/showcase/bounty_race.py -n 3 --wait
+# Verified live: 3 bounties claimed by grok-hub-a, grok-hub-b, grok-hub-c
+# (distinct claimers — proof of a real race)
+
+curl -s localhost:8787/api/showcase | python3 -m json.tool | head
+# Dashboard → Showcase tab
+```
+
+Brainstormed by three top-model agents (Claude Opus max effort, Claude Sonnet
+high effort, Grok-4) — full notes in [`docs/brainstorm/`](docs/brainstorm/)
+and the operator guide in [`docs/SHOWCASE.md`](docs/SHOWCASE.md).
 
 Prove drain (create tasks via muster MCP or CLI tooling) and expect stamp
 files under `/tmp/fleet-drain-*.txt` within one headless cycle or one nudge
