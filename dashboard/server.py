@@ -15,6 +15,7 @@ Then open http://localhost:8787/
 
 import json
 import os
+import shutil
 import sqlite3
 import subprocess
 import sys
@@ -22,6 +23,22 @@ import time
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+
+# launchd-run processes don't inherit a shell PATH (e.g. no
+# /opt/homebrew/bin), so a bare "tmux" lookup silently fails there even
+# though it works fine from an interactive terminal. Search PATH first,
+# then fall back to the common install locations.
+def _find_tmux():
+    found = shutil.which("tmux")
+    if found:
+        return found
+    for candidate in ("/opt/homebrew/bin/tmux", "/usr/local/bin/tmux", "/usr/bin/tmux"):
+        if os.path.exists(candidate):
+            return candidate
+    return None
+
+
+TMUX_BIN = _find_tmux()
 
 HERE = Path(__file__).resolve().parent
 FRONTEND_DIR = HERE / "frontend"
@@ -35,6 +52,30 @@ SPOKE_REMOTE_PY = os.environ.get("MUSTER_SPOKE_REMOTE_PY", "python3")
 
 PORT = int(os.environ.get("MUSTER_DASHBOARD_PORT", "8787"))
 EVENTS_LIMIT = 50
+PANE_CAPTURE_LINES = 200  # scroll back this many lines of the pane for drill-down
+
+
+def capture_tmux_pane(pane_id):
+    """Return the verbatim content of a local tmux pane, ANSI escapes
+    preserved (-e), or None if tmux isn't installed or the pane is gone.
+
+    Only ever runs against a LOCAL tmux server — this machine's. There is
+    no equivalent for the spoke today (no tmux installed there), so this
+    is only ever called for hub-machine agents; see merge_pane_snapshots.
+    """
+    if not pane_id or not TMUX_BIN:
+        return None
+    try:
+        out = subprocess.run(
+            [TMUX_BIN, "capture-pane", "-e", "-p", "-t", pane_id,
+             "-S", f"-{PANE_CAPTURE_LINES}"],
+            capture_output=True, text=True, timeout=5,
+        )
+        if out.returncode != 0:
+            return None
+        return out.stdout
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return None
 
 # Static mapping of alias -> machine. muster's own schema doesn't record
 # which physical machine an agent is on (by design — it's meant to be
@@ -48,6 +89,25 @@ ALIAS_MACHINE = {
     "grok-mbp": "spoke",
     "macbookpro-test": "spoke",
 }
+
+
+def local_tmux_pane_ids():
+    """Every pane_id currently live on THIS machine's tmux server. Used to
+    auto-detect "hub" for tmux-registered agents without hardcoding every
+    new alias into ALIAS_MACHINE by hand.
+    """
+    if not TMUX_BIN:
+        return set()
+    try:
+        out = subprocess.run(
+            [TMUX_BIN, "list-panes", "-a", "-F", "#{pane_id}"],
+            capture_output=True, text=True, timeout=5,
+        )
+        if out.returncode != 0:
+            return set()
+        return set(out.stdout.split())
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return set()
 
 
 def now_ms():
@@ -65,7 +125,7 @@ def query_bus_db():
     conn.row_factory = sqlite3.Row
     try:
         agents = [dict(r) for r in conn.execute(
-            "SELECT alias, role, model_type, session_name, project, label, "
+            "SELECT alias, role, model_type, session_name, pane_id, project, label, "
             "departed, registered_at, last_seen FROM agents ORDER BY alias"
         )]
         threads = [dict(r) for r in conn.execute(
@@ -154,9 +214,15 @@ def parse_iso_to_ms(iso_str):
 
 def build_status():
     agents, threads, events = query_bus_db()
+    local_panes = local_tmux_pane_ids()
 
     for a in agents:
-        a["machine"] = ALIAS_MACHINE.get(a["alias"], "unknown")
+        if a["alias"] in ALIAS_MACHINE:
+            a["machine"] = ALIAS_MACHINE[a["alias"]]
+        elif a["pane_id"] and a["pane_id"] in local_panes:
+            a["machine"] = "hub"
+        else:
+            a["machine"] = "unknown"
         a["activity"] = {"source": "none"}
         a["pane_snapshot"] = None
         # attach current task: most recently updated open/claimed/needs_info/
@@ -174,6 +240,17 @@ def build_status():
     spoke_payload = run_spoke_collector()
     merge_activity(agents, hub_payload, "hub")
     merge_activity(agents, spoke_payload, "spoke")
+
+    # Verbatim live pane capture — only possible for agents with a real
+    # tmux pane_id on THIS (hub) machine's tmux server. The spoke has no
+    # tmux installed today, so this never fires for spoke agents; they
+    # keep pane_snapshot: null with the "no live pane" explanation the
+    # frontend already renders calmly, not as an error.
+    for a in agents:
+        if a["machine"] == "hub" and a["pane_id"] and a["pane_id"] in local_panes:
+            snapshot = capture_tmux_pane(a["pane_id"])
+            if snapshot is not None:
+                a["pane_snapshot"] = snapshot
 
     # "live" combines two independent signals, taking whichever is fresher:
     # muster's own last_seen (only updated by explicit bus calls — register,
