@@ -1,66 +1,138 @@
 # muster-fleet
 
-A two-machine, multi-CLI coding-agent fleet built on top of
-[Court Schuett's `muster`](https://github.com/schuettc/muster) — a local
-coordination bus that lets independent coding-agent sessions (Claude Code,
-Grok CLI, Codex, ...) message and hand tasks to each other without
-copy/paste.
+**GitHub:** [github.com/chendren/muster-fleet](https://github.com/chendren/muster-fleet)  
+**Owner:** [chendren](https://github.com/chendren)
 
-`muster` itself is explicitly **local-only** by design: one unix-socket
-daemon, one local SQLite file, no networking. This repo documents how we
-bridged that across two Macs on the same LAN — one **hub** machine running
-the real daemon, and a second **spoke** machine reaching it transparently
-over a persistent SSH-forwarded unix socket — so agents on either machine
-share one bus, and how we wired up both Claude Code and Grok CLI (two
-different Grok CLI implementations, in our case) as peers on it.
+A two-machine, multi-CLI coding-agent **fleet** on top of
+[Court Schuett’s `muster`](https://github.com/schuettc/muster) — a local
+coordination bus for independent coding-agent sessions (Claude Code, Grok
+CLI, …) to message and hand tasks to each other without copy/paste.
 
-This is the working setup, distilled. It skips every dead end we actually
-hit (wrong SSH key, passphrase-locked identity, a mismatched key on the
-remote's `authorized_keys`, a broken pipe of `pmset` output into an API-key
-file, three rounds of "invalid API key", and two real upstream bugs in the
-Grok CLI npm package) — see [`PITFALLS.md`](PITFALLS.md) if you want the
-full story of what went wrong and why, but you shouldn't need it if you
-follow this doc in order.
+This repository is the **working multi-machine deployment**: SSH socket
+bridge, worker spawn/drain automation, operator dashboard, and a local
+“Computer” voice stack. It is not a fork of `muster`; it is the layer
+around it.
+
+| Layer | What it is | Doc |
+|-------|------------|-----|
+| Bus bridge | Hub `muster serve` + spoke SSH reverse unix-socket tunnel | this README § Architecture–§ Verify |
+| Fleet workers | Spawn Claude/Grok on hub or spoke; continuous inbox drain | [`docs/FLEET.md`](docs/FLEET.md) |
+| Dashboard | Live agents, tasks, collab sequence, terminal panes | [`docs/DASHBOARD.md`](docs/DASHBOARD.md) |
+| Computer voice | Local Whisper + Ollama + Kokoro-ONNX (no macOS `say`) | [`docs/VOICE.md`](docs/VOICE.md) |
+| War stories | Bugs we hit so you don’t re-derive them | [`PITFALLS.md`](PITFALLS.md) |
+
+`muster` itself is **local-only** by design: one unix-socket daemon, one
+SQLite file, no networking. We bridge that across two Macs on the same LAN
+— one **hub** running the real daemon, one **spoke** reaching it over a
+persistent SSH-forwarded socket — so agents on either machine share one
+bus.
+
+---
 
 ## Architecture
 
 ```
-┌─────────────────────────┐         SSH reverse tunnel          ┌──────────────────────────┐
-│   HUB (e.g. Mac Studio)  │  (unix-socket forward, persistent)  │  SPOKE (e.g. MacBook Pro) │
-│                          │◄────────────────────────────────────│                           │
-│  muster serve (daemon)   │                                      │  muster (client only,     │
-│  ~/.local/share/muster/  │                                      │  MUSTER_NO_AUTOSPAWN=1)   │
-│    sock  ◄── real socket │──── forwarded to ────────────────►  │  ~/.local/share/muster/   │
-│    bus.db (SQLite)       │                                      │    sock (forwarded copy)  │
-│                          │                                      │                           │
-│  Claude Code  (MCP)      │                                      │  Claude Code  (MCP)       │
-│  Grok CLI     (MCP)      │                                      │  Grok CLI     (MCP)       │
-└─────────────────────────┘                                      └──────────────────────────┘
+┌─────────────────────────┐     SSH reverse tunnel      ┌──────────────────────────┐
+│   HUB (e.g. Mac Studio)  │  (unix-socket forward)      │  SPOKE (e.g. MacBook Pro) │
+│                          │◄────────────────────────────│                           │
+│  muster serve (daemon)   │                             │  muster client only        │
+│  ~/.local/share/muster/  │                             │  MUSTER_NO_AUTOSPAWN=1    │
+│    sock  ◄── real socket │──── forwarded to ─────────► │  sock (remote end)        │
+│    bus.db (SQLite)       │                             │                           │
+│                          │                             │                           │
+│  Claude TUI  (tmux)      │                             │  Grok TUI  (tmux)         │
+│  Grok headless loops     │                             │  (native/Rust grok)       │
+│  Dashboard :8787         │                             │                           │
+│  fleet-nudge-tui         │── SSH send-keys ───────────►│  spoke panes              │
+└─────────────────────────┘                             └──────────────────────────┘
 ```
 
-Only the hub ever runs `muster serve`. The spoke's `muster`/Claude
-Code/Grok CLI processes dial what looks like their own local socket, but
-that socket file is actually the remote end of an SSH `-R` (reverse)
-forward whose target is the hub's real socket. Every register/send/task
-call from the spoke round-trips over SSH to the one real daemon and its
-one SQLite file — there is no second daemon, no split-brain, no sync to
-reconcile.
+Only the hub runs `muster serve`. The spoke dials what looks like a local
+socket; that file is the remote end of an SSH `-R` forward to the hub’s
+real socket. Every register/send/task call from the spoke round-trips to
+**one** daemon and **one** SQLite file.
 
-`MUSTER_NO_AUTOSPAWN=1` is set on the spoke specifically so that if the
-tunnel is ever down, its clients fail loudly instead of silently spinning
-up their own local daemon (which would fork the bus into two disconnected
-ones with no way to merge them back).
+`MUSTER_NO_AUTOSPAWN=1` on the spoke ensures a down tunnel fails loudly
+instead of silently spawning a second local daemon (split-brain bus with
+no merge path).
+
+### Worker modes (important)
+
+| Placement | Mode | Why |
+|-----------|------|-----|
+| Hub + Grok (npm CLI) | **Headless drain loop** | Interactive npm grok-cli corrupts multi-tool-call args; `-p` is reliable |
+| Hub + Claude | **tmux TUI** | Real pane for dashboard drill-down; nudged every ~20s |
+| Spoke + Grok (native) | **tmux TUI** | Native CLI is fine interactively; nudged over SSH |
+| Spoke + Claude | **Not automatable** | Subscription keychain needs a GUI session |
+
+See [`docs/FLEET.md`](docs/FLEET.md) for spawn/restart/drain details.
+
+---
+
+## Repository map
+
+```
+muster-fleet/
+  README.md                 # this file
+  PITFALLS.md               # post-mortems
+  docs/
+    FLEET.md                # spawn, drain, nudge, restart
+    DASHBOARD.md            # operator UI
+    VOICE.md                # Computer voice stack
+  fleet/
+    muster-spawn-tui.sh     # spawn Claude/Grok on hub|spoke
+    fleet-restart-hub-workers.sh
+    fleet-nudge-tui.sh      # keep TUI workers draining
+  dashboard/
+    server.py               # aggregator + voice HTTP
+    frontend/index.html
+    collectors/             # hub_local, spoke_local
+    CONTRACT.md
+    voice/                  # STT/LLM/TTS (see docs/VOICE.md)
+  config/                   # Claude hooks, Grok coordination text
+  patches/                  # npm grok-cli bugfixes
+  .claude/skills/fleet-spawn/
+```
+
+---
+
+## Quick start (already-bridged machines)
+
+If the SSH tunnel and `muster serve` are already up:
+
+```bash
+# Install fleet tools on the hub
+install -m 755 fleet/muster-spawn-tui.sh           ~/.local/bin/muster-spawn-tui
+install -m 755 fleet/fleet-restart-hub-workers.sh  ~/.local/bin/fleet-restart-hub-workers
+install -m 755 fleet/fleet-nudge-tui.sh            ~/.local/bin/fleet-nudge-tui
+
+# Bring up a standard 3× hub Grok + nudge supervisor
+fleet-restart-hub-workers
+
+# Optional: Claude TUI + spoke Groks
+muster-spawn-tui claude hub   hub-tui-claude worker
+muster-spawn-tui grok   spoke grok-spoke-a   worker
+muster-spawn-tui grok   spoke grok-spoke-b   worker
+
+# Dashboard
+python3 dashboard/server.py   # http://127.0.0.1:8787
+```
+
+Prove drain (create tasks via muster MCP or CLI tooling) and expect stamp
+files under `/tmp/fleet-drain-*.txt` within one headless cycle or one nudge
+interval — see [`docs/FLEET.md`](docs/FLEET.md#smoke-test-prove-the-fleet-drains).
+
+---
 
 ## Prerequisites
 
-- Two Macs on the same LAN (this also works on Linux spokes/hubs with
-  trivial path adjustments; Windows needs WSL2 per upstream `muster`'s own
-  requirement).
-- SSH access from the hub to the spoke, with a **passphrase-less** key
-  dedicated to this bridge (details below — don't reuse a passphrase-locked
-  personal key, it breaks the automated retry loop).
-- Claude Code and/or Grok CLI already installed on whichever machines will
-  run them.
+- Two Macs on the same LAN (Linux spokes/hubs need trivial path tweaks;
+  Windows needs WSL2 per upstream `muster`).
+- SSH from hub → spoke with a **passphrase-less** bridge key.
+- Claude Code and/or Grok CLI installed where you will run them.
+- Hub: `tmux`, Python 3, optional Ollama + Whisper for voice.
+
+---
 
 ## 1. Install `muster` on both machines
 
@@ -68,15 +140,12 @@ ones with no way to merge them back).
 curl -fsSL https://muster.tools/install.sh | sh
 ```
 
-Installs to `~/.local/bin/muster`. Do this on **both** the hub and the
-spoke.
+Installs to `~/.local/bin/muster`. Do this on **both** hub and spoke.
 
-## 2. Set up passwordless SSH from the hub to the spoke
+## 2. Passwordless SSH from hub to spoke
 
-Generate a **dedicated, passphrase-less** key on the hub — don't reuse your
-personal key even if it's convenient, because a passphrase-protected key
-silently breaks any automated/background SSH call (`ssh-agent` won't have
-it loaded, and non-interactive sessions can't prompt for it):
+Generate a **dedicated, passphrase-less** key on the hub (don’t reuse a
+passphrase-locked personal key — it breaks automated tunnel reconnect):
 
 ```bash
 # on the hub
@@ -84,9 +153,7 @@ ssh-keygen -t ed25519 -f ~/.ssh/id_muster -N "" -C "muster-bridge"
 cat ~/.ssh/id_muster.pub
 ```
 
-On the **spoke**, add that public key to `authorized_keys` — replacing (not
-appending to) anything already there under a fresh setup, so there's no
-ambiguity about which key is in play:
+On the **spoke**, install that public key:
 
 ```bash
 # on the spoke
@@ -96,10 +163,9 @@ chmod 600 ~/.ssh/authorized_keys
 ```
 
 Enable Remote Login on the spoke: **System Settings → General → Sharing →
-Remote Login**. (The `systemsetup -setremotelogin` CLI equivalent needs
-Full Disk Access granted to Terminal first — the GUI toggle is simpler.)
+Remote Login**.
 
-Add a convenience alias on the hub (`~/.ssh/config`):
+Hub `~/.ssh/config`:
 
 ```
 Host muster-remote
@@ -109,27 +175,22 @@ Host muster-remote
     IdentitiesOnly yes
 ```
 
-Verify:
-
 ```bash
 ssh muster-remote 'echo OK'
 ```
 
-## 3. Prep the spoke's socket path
+## 3. Prep the spoke’s socket path
 
 ```bash
 ssh muster-remote 'mkdir -p ~/.local/share/muster && rm -f ~/.local/share/muster/sock'
 ```
 
-## 4. Persistent reverse tunnel (launchd-supervised, self-healing)
+## 4. Persistent reverse tunnel (launchd, self-healing)
 
 On the **hub**, `~/.local/bin/muster-tunnel.sh`:
 
 ```sh
 #!/bin/sh
-# Persistent reverse tunnel: exposes this Mac's muster daemon socket
-# at the default muster socket path on the spoke, so its
-# muster/claude/grok clients transparently share this machine's bus.
 LOCAL_SOCK="$HOME/.local/share/muster/sock"
 REMOTE_SOCK="/Users/<spoke-username>/.local/share/muster/sock"
 while true; do
@@ -169,20 +230,9 @@ chmod +x ~/.local/bin/muster-tunnel.sh
 launchctl load ~/Library/LaunchAgents/tools.muster.tunnel.plist
 ```
 
-The retry loop means: spoke reboots, sleeps, or the network blips → the
-tunnel reconnects on its own within ~5s of the hub noticing the drop
-(`ServerAliveInterval`/`ServerAliveCountMax` detect a dead connection so it
-doesn't just hang forever).
+## 5. Make the hub resilient
 
-## 5. Make the hub itself resilient
-
-The single point of failure in this whole design is the hub. Everything
-here is aimed at making sure the hub is always up, since the spoke can't
-help if the hub is down (see [Failure modes](#failure-modes-and-limits)
-below for what's genuinely still unfixable).
-
-**Daemon supervision** — don't rely on lazy-spawn; run it as a proper
-service (`~/Library/LaunchAgents/tools.muster.daemon.plist`):
+**Daemon** — `~/Library/LaunchAgents/tools.muster.daemon.plist`:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -203,46 +253,19 @@ service (`~/Library/LaunchAgents/tools.muster.daemon.plist`):
 </plist>
 ```
 
-**Prevent sleep** (no `sudo` needed — user-level `caffeinate`, also
-launchd-supervised so it restarts if killed),
-`~/Library/LaunchAgents/tools.muster.caffeinate.plist`:
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>Label</key><string>tools.muster.caffeinate</string>
-  <key>ProgramArguments</key>
-  <array>
-    <string>/usr/bin/caffeinate</string>
-    <string>-disu</string>
-  </array>
-  <key>RunAtLoad</key><true/>
-  <key>KeepAlive</key><true/>
-</dict>
-</plist>
-```
+**Prevent sleep** — `tools.muster.caffeinate.plist` running
+`/usr/bin/caffeinate -disu` with `RunAtLoad` + `KeepAlive`.
 
 ```bash
 launchctl load ~/Library/LaunchAgents/tools.muster.daemon.plist
 launchctl load ~/Library/LaunchAgents/tools.muster.caffeinate.plist
+sudo pmset -a autorestart 1   # after power loss
 ```
 
-**Survive a power loss** (needs a password prompt, run it yourself):
+Enable auto-login on the hub if you need unattended reboot recovery
+(FileVault still requires an unlock — expected).
 
-```bash
-sudo pmset -a autorestart 1
-```
-
-**Come back up after a reboot with nobody physically present:** enable
-auto-login for the hub's account — **System Settings → Users & Groups →
-Login Options (ⓘ) → Automatic login**. If FileVault is on, this only gets
-you to the unlock screen automatically, not all the way to a logged-in
-session — that's expected, and arguably correct (don't disable disk
-encryption for this).
-
-## 6. Register `muster` as an MCP server, on both machines, both CLIs
+## 6. Register `muster` as MCP (both machines, both CLIs)
 
 **Claude Code:**
 
@@ -256,128 +279,96 @@ claude mcp add muster -s user -- muster mcp
 grok mcp add muster -c muster -a mcp
 ```
 
-**Grok CLI (native/Rust `grok`, different syntax — check `grok mcp add
---help` on whichever build you have, flags vary by version):**
+**Grok CLI (native/Rust):**
 
 ```bash
 grok mcp add muster -- muster mcp
 ```
 
-On the spoke specifically, also pass `MUSTER_NO_AUTOSPAWN=1` as an env var
-on each registration (`-e MUSTER_NO_AUTOSPAWN=1` on both `claude mcp add`
-and `grok mcp add`) — see [Architecture](#architecture) for why.
+On the spoke, also set `MUSTER_NO_AUTOSPAWN=1` on each registration.
 
 ## 7. Auto-register sessions on start
 
-**Claude Code** has real lifecycle hooks. Merge into
-`~/.claude/settings.json` (merge, don't overwrite — see
+**Claude Code** — merge hooks from
 [`config/claude-settings-hooks.json`](config/claude-settings-hooks.json)
-for the block; if you already have hooks, append these entries to your
-existing arrays rather than replacing the file):
+into `~/.claude/settings.json` (append, don’t clobber). Use the **absolute
+path** to `muster` in hook commands.
 
-```json
-{
-  "hooks": {
-    "SessionStart": [{
-      "matcher": "startup|resume",
-      "hooks": [{"type": "command", "command": "muster hook SessionStart claude"}]
-    }],
-    "Stop": [{
-      "hooks": [{"type": "command", "command": "muster hook Stop claude"}]
-    }],
-    "SessionEnd": [{
-      "hooks": [{"type": "command", "command": "muster hook SessionEnd claude"}]
-    }]
-  }
-}
-```
+**Grok CLI** has no lifecycle hooks. Append
+[`config/grok-coordination-instructions.md`](config/grok-coordination-instructions.md)
+to `~/.grok/GROK.md` (npm) or `~/.grok/AGENTS.md` (native).
 
-Use the **absolute path** to `muster` in these commands (e.g.
-`/Users/you/.local/bin/muster hook ...`) — hook commands don't always
-inherit your shell's `PATH`.
+**Fleet workers** should still be spawned via `muster-spawn-tui` so
+register + drain is deterministic (not “maybe the model reads GROK.md”).
 
-**Grok CLI has no session-lifecycle hooks.** The closest equivalent is a
-global instructions file the model reads at the start of every session —
-`~/.grok/GROK.md` for the npm build, `~/.grok/AGENTS.md` for the native
-build. See [`config/grok-coordination-instructions.md`](config/grok-coordination-instructions.md)
-for the text we use — append it to whichever file your Grok CLI build
-supports; don't overwrite it if you already have custom instructions
-there.
-
-## 8. Verify
+## 8. Verify the bus
 
 ```bash
-muster agents                 # from either machine, should show every registered agent
+muster agents
 muster send <alias> "hi" --from you
 muster inbox <alias>
 ```
 
-A real end-to-end smoke test: register two agents (any mix of
-machine/CLI), have one `send_message` to the other, have the other
-`get_inbox` / `get_thread` / `reply`. Then try `task_create` →
-`task_claim` → `task_transition` across machines to confirm the full task
-lifecycle, not just messaging.
+End-to-end: two agents, `send_message` / `get_inbox` / `reply`, then
+`task_create` → `task_claim` → `task_transition` across machines.
+
+## 9. Fleet + dashboard + voice
+
+```bash
+fleet-restart-hub-workers
+python3 dashboard/server.py
+# optional voice models:
+cd dashboard/voice && ./download_models.sh
+```
+
+| Doc | Topic |
+|-----|--------|
+| [`docs/FLEET.md`](docs/FLEET.md) | Spawn matrix, early-kill loops, TUI nudge, smoke tests |
+| [`docs/DASHBOARD.md`](docs/DASHBOARD.md) | UI views, APIs, liveness rules |
+| [`docs/VOICE.md`](docs/VOICE.md) | Computer panel, local models, tool catalog |
+
+---
 
 ## Failure modes and limits
 
-Being straight about what this setup does and doesn't cover:
+**Self-healing (no hands):**
 
-**Covered (self-healing, no manual intervention needed):**
-- Hub sleeps → prevented outright (`caffeinate`).
-- Hub daemon crashes → launchd restarts it within seconds.
-- Tunnel drops (network blip, spoke reboots/sleeps) → retry loop
-  reconnects within ~5s of detecting the drop.
-- Hub reboots (crash, update, power restart) → `RunAtLoad` + auto-login
-  bring the daemon and tunnel back with no one physically present.
-- Hub loses power and comes back → `pmset autorestart` boots it, then the
-  above reboot recovery kicks in.
+- Hub sleep prevented (`caffeinate`)
+- Daemon crash → launchd restart
+- Tunnel drop → retry loop (~5s after detect)
+- Hub reboot → `RunAtLoad` + auto-login (if configured)
 
-**Not covered, and not fixable by configuration — this is the actual shape
-of `muster`'s architecture, not a gap we didn't get to:**
-- The hub is physically off, permanently disconnected from the network, or
-  its disk fails: the bus is down until it's back, because there is
-  exactly one daemon and exactly one SQLite file, with no replication.
-  Closing this for real means building leader election and data
-  replication into `muster` itself — a fundamentally different, much
-  larger project than a deployment script can bolt on from outside.
-- If the LAN/router itself goes down, both machines lose the ability to
-  reach each other regardless of anything above.
+**Not fixable by config (shape of `muster`):**
 
-If you need survival of a genuine hub-loss event, the honest options are:
-run two fully independent `muster` buses (one per machine) and coordinate
-handoffs manually, or contribute real HA/replication support upstream.
+- Hub permanently off / disk dead → bus is down (single daemon, no HA)
+- LAN/router down → no spoke path
 
-## Known upstream bugs we hit and patched (npm `@vibe-kit/grok-cli` only)
+For true hub-loss survival you need either two independent buses with
+manual handoff, or upstream HA/replication.
 
-The **native/Rust** `grok` CLI didn't have these issues. If you're on the
-npm `@vibe-kit/grok-cli` package, as of the version we tested
-(`0.0.34`), headless (`-p`) mode silently never saw any MCP tools at all,
-for two independent reasons:
+---
 
-1. `getAllGrokTools()` (`dist/grok/tools.js`) fired
-   `manager.ensureServersInitialized()` without `await`-ing it — a
-   "don't block" optimization that meant the tool list was captured
-   before the MCP handshake had a chance to finish.
-2. `mcp/client.js`'s `ensureServersInitialized()` did
-   `await import('../mcp/config')` — **missing the `.js` extension**,
-   which Node's strict ESM resolver rejects outright
-   (`ERR_MODULE_NOT_FOUND`). This error was then silently swallowed by a
-   `.catch(() => {})` one level up, so it failed with zero visible
-   symptom other than "the model just doesn't have your tools."
+## Known upstream bugs (npm `@vibe-kit/grok-cli`)
 
-Also unrelated to MCP: this version always sent xAI's `search_parameters`
-field (even set to `"off"`), which now 410s since xAI deprecated Live
-Search — see [`patches/`](patches/) for the diffs, which you can apply
-directly to your installed copy under
-`~/.npm-global/lib/node_modules/@vibe-kit/grok-cli/dist/`. These are
-patches to *compiled output*, so they'll be wiped by the next
-`npm install -g` upgrade — reapply as needed, or check whether upstream
-has since fixed them.
+Native/Rust `grok` did not show these. On npm `0.0.34`-era builds:
+
+1. Headless MCP tools never loaded — missing `await` on MCP init + broken
+   ESM import (`.js` extension) swallowed by `.catch(() => {})`.
+2. Live Search `search_parameters` field 410s — strip it.
+3. Interactive multi-tool-call argument corruption (see Fleet section).
+
+Patches under [`patches/`](patches/) apply to compiled output under
+`~/.npm-global/lib/node_modules/@vibe-kit/grok-cli/dist/` and are wiped by
+the next `npm i -g` — reapply or check upstream.
+
+---
 
 ## Credit
 
-Bus, protocol, daemon, MCP server, CLI, hooks: all
-[Court Schuett's `muster`](https://github.com/schuettc/muster) — this repo
-is purely the multi-machine deployment/bridging layer on top, plus the two
-Grok CLI bugfixes. If you just want a coordination bus on one machine, go
-use the upstream project directly; you don't need any of this.
+Bus, protocol, daemon, MCP server, CLI, hooks:
+[Court Schuett’s `muster`](https://github.com/schuettc/muster).
+
+This repo ([**chendren/muster-fleet**](https://github.com/chendren/muster-fleet))
+is the multi-machine bridge, fleet spawn/drain automation, dashboard, and
+local Computer voice stack on top. If you only need a single-machine bus,
+use upstream `muster` directly.

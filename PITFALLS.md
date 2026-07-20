@@ -107,3 +107,78 @@ it from scratch.
   `~/.grok/AGENTS.md`, `grok mcp add <name> -- <cmd> <args...>`). Check
   `grok --version` and `grok mcp add --help` on each machine rather than
   assuming they match.
+- **Interactive npm grok-cli corrupts multi-tool-call arguments.** The
+  streaming delta-merge reducer keys tool-call fragments by **array
+  position** instead of the OpenAI-spec `index` field. After the first
+  tool call, subsequent argument JSON is garbage
+  (`Invalid tool arguments… trailing characters`). **Headless `-p` is
+  fine.** That is why hub Grok workers are drain loops, not tmux TUIs.
+  Spoke uses native/Rust grok, which does not have this bug.
+
+## Fleet drain (“only the operator agent does work”)
+
+These three stacked bugs made a fully registered fleet look dead. Full
+ops guide: [`docs/FLEET.md`](docs/FLEET.md).
+
+- **Unquoted heredoc expanded `"$@"` when writing the loop script.**
+  `spawn_hub_grok_loop` used `cat > loop <<EOF` (unquoted). The parent
+  shell expanded `"$@"` to nothing at **write** time, so every cycle ran
+  effectively `"" &` → `/tmp/muster-loop-….sh: line 17: : command not
+  found` (rc=127) forever. Fix: quoted heredoc `<<'LOOP_EOF'` plus a
+  small env preamble that exports `GROK_BIN` / `ALIAS` / `ROLE`.
+- **`grok -p` does not exit after the model finishes.** Even with a
+  correct loop, the node process hung after printing `idle`. A hard
+  timeout of 180s meant workers only re-polled every ~3 minutes, so new
+  tasks sat open while the operator’s interactive session looked like the
+  only thing working. Fix: **early-kill** — watch only the bytes written
+  this cycle; when `idle` or `FLEET_CYCLE_N_DONE` appears, kill the tree.
+  Target cadence: ~10–15s idle cycles, 120s max safety timeout.
+- **TUI workers do not poll.** Claude Code and spoke Grok TUIs only run a
+  turn when something is typed into the pane. A prime prompt of
+  “register, say ready, wait” guarantees they never claim tasks. Fix:
+  drain-oriented prime prompt **plus** `fleet-nudge-tui` (local tmux for
+  hub Claude; **SSH `tmux send-keys`** for spoke — see next point).
+- **`muster nudge` is wrong for spoke aliases.** Spoke agents often store
+  hub-side `socket_path` / pane ids in `bus.db`. Local `muster nudge
+  grok-spoke-a` has been observed typing into the **Claude hub pane**.
+  Always kick spoke TUIs over `ssh muster-remote 'tmux send-keys …'`.
+- **`muster gc` tombstones headless workers.** No pane ⇒ “dead session.”
+  History is kept; the next drain cycle re-registers. Don’t run gc in a
+  tight loop against a headless fleet and then conclude the workers are
+  gone. `LIVE ✗` on hub Groks is expected.
+- **`pkill -f fleet-nudge-tui` from a restart script kills the restart
+  script.** The shell wrapper’s argv contains the pattern. Kill by
+  **pidfile** only (`/tmp/muster-fleet-nudge.pid`).
+- **Bare `echo -n` under `/bin/sh` on macOS** can print the literal `-n`.
+  Use `printf` in portable scripts.
+- **Session name must equal the muster alias.** Spawning
+  `muster-tui-hub-hub-tui-claude` while the prime prompt registers
+  `hub-tui-claude` creates **two agents on one pane** and double-counts
+  on the dashboard wall.
+
+## Claude Code permissions / trust
+
+- **`--dangerously-skip-permissions` alone is not enough.** Claude can
+  still be in footer “manual mode,” which prompts on every tool. Always
+  also pass `--permission-mode bypassPermissions` at launch.
+- **Workspace trust is a separate gate.** Even with both permission
+  flags, a new directory can hang on “Is this a project you trust?”
+  Pre-set `projects[path].hasTrustDialogAccepted = true` in
+  `~/.claude.json` for `$HOME` (spawn script does this).
+- **Claude on spoke cannot be SSH-spawned** with a subscription login —
+  keychain items need a GUI session. Fail fast; don’t hang.
+
+## Dashboard / voice
+
+- **`GET /api/voice/aliases` is not a bare map** — it returns
+  `{aliases: {…}, display_names: {…}}`. Unwrap before speech lookup.
+- **Pipeline audio field naming** — prefer `audio_wav_b64`; keep a
+  fallback for `audio_b64` if older clients exist.
+- **Never use macOS `say` as the primary TTS path** for the Computer
+  panel; Kokoro-ONNX is the intended engine (local models under
+  `~/.local/share/muster-voice/`).
+- **Python 3.9 on some Macs** — avoid `str | None` syntax in dashboard
+  code if the system Python is 3.9; use `Optional[str]` or run under a
+  newer venv.
+- **Agent count ≠ pane count.** Headless hub Groks are real workers with
+  `pane_snapshot: null`. Don’t “fix accuracy” by inventing panes.

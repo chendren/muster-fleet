@@ -1,0 +1,84 @@
+{
+  "tools": [
+    {
+      "name": "open_view",
+      "description": "Open a dashboard view (fleet, collab, terminals)",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "view": {"type": "string", "enum": ["fleet", "collab", "terminals"]}
+        },
+        "required": ["view"]
+      }
+    },
+    {
+      "name": "open_terminal",
+      "description": "Open terminal pane for a specific agent",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "agent": {"type": "string", "description": "Bus alias (e.g. grok-hub-a)"}
+        },
+        "required": ["agent"]
+      }
+    },
+    {
+      "name": "focus_agent",
+      "description": "Highlight and focus a specific agent in collab",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "agent": {"type": "string", "description": "Bus alias"}
+        },
+        "required": ["agent"]
+      }
+    },
+    {
+      "name": "focus_thread",
+      "description": "Focus a thread by ID or subject",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "thread_id": {"type": "integer"},
+          "subject": {"type": "string"}
+        }
+      }
+    },
+    {
+      "name": "set_filter",
+      "description": "Set the collaboration filter",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "filter": {"type": "string", "enum": ["all", "live", "grok", "claude", "hub", "spoke"]}
+        },
+        "required": ["filter"]
+      }
+    },
+    {
+      "name": "clear_focus",
+      "description": "Clear any active collab focus or filter",
+      "parameters": {"type": "object", "properties": {}}
+    },
+    {
+      "name": "list_fleet",
+      "description": "List all agents and their status",
+      "parameters": {"type": "object", "properties": {}}
+    },
+    {
+      "name": "report_status",
+      "description": "Report live counts (panes, tasks, agents)",
+      "parameters": {"type": "object", "properties": {}}
+    },
+    {
+      "name": "on_screen",
+      "description": "Flash and open target view (acknowledgment)",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "view": {"type": "string"}
+        }
+      }
+    }
+  ]
+}

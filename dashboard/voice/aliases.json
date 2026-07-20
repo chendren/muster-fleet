@@ -1,0 +1,78 @@
+{
+  "aliases": {
+    "chad": "hub-tui-claude",
+    "claude": "hub-tui-claude",
+    "number one": "hub-tui-claude",
+    "the claude session": "hub-tui-claude",
+    "captain": "hub-tui-claude",
+    "studio claude": "hub-tui-claude",
+    "hub claude": "hub-tui-claude",
+
+    "court": "ClaudeMacBookPro1",
+    "macbook claude": "ClaudeMacBookPro1",
+    "laptop claude": "ClaudeMacBookPro1",
+    "claude macbook": "ClaudeMacBookPro1",
+    "claude macbook pro": "ClaudeMacBookPro1",
+    "claude macbook pro one": "ClaudeMacBookPro1",
+
+    "chris": "grok-spoke-a",
+    "spoke a": "grok-spoke-a",
+    "grok spoke a": "grok-spoke-a",
+    "remote grok": "grok-spoke-a",
+
+    "alex": "grok-spoke-b",
+    "spoke b": "grok-spoke-b",
+    "grok spoke b": "grok-spoke-b",
+
+    "scout": "grok-hub-a",
+    "grok hub a": "grok-hub-a",
+    "hub alpha": "grok-hub-a",
+    "hub a": "grok-hub-a",
+
+    "rio": "grok-hub-b",
+    "grok hub b": "grok-hub-b",
+    "hub bravo": "grok-hub-b",
+    "hub b": "grok-hub-b",
+
+    "nova": "grok-hub-c",
+    "grok hub c": "grok-hub-c",
+    "hub charlie": "grok-hub-c",
+    "hub c": "grok-hub-c",
+
+    "morgan": "grok-mbp-worker",
+    "mbp worker": "grok-mbp-worker",
+    "macbook grok": "grok-mbp-worker",
+
+    "sam": "MacStudioGrok1",
+    "mac studio grok": "MacStudioGrok1",
+    "this grok": "MacStudioGrok1",
+    "computer": "MacStudioGrok1",
+
+    "operator": "chad-mac",
+    "chad mac": "chad-mac"
+  },
+  "display_names": {
+    "hub-tui-claude": "Chad",
+    "ClaudeMacBookPro1": "Court",
+    "grok-spoke-a": "Chris",
+    "grok-spoke-b": "Alex",
+    "grok-hub-a": "Scout",
+    "grok-hub-b": "Rio",
+    "grok-hub-c": "Nova",
+    "grok-mbp-worker": "Morgan",
+    "MacStudioGrok1": "Sam",
+    "chad-mac": "Operator"
+  },
+  "stt_corrections": {
+    "grock": "grok",
+    "groc": "grok",
+    "rock": "grok",
+    "clawed": "claude",
+    "clod": "claude",
+    "cloud": "claude",
+    "spoke hey": "spoke a",
+    "spokane": "spoke a",
+    "mac book": "macbook",
+    "macbook pro one": "macbook pro"
+  }
+}

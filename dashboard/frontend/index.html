@@ -112,7 +112,7 @@
     }
 
     body {
-      padding: 20px 24px 40px;
+      padding: 20px 24px 96px; /* room for fixed Computer FAB */
     }
 
     header.app-header {
@@ -591,7 +591,12 @@
       font-size: 0.88rem;
     }
 
-    :root[data-theme="dark"] .error-banner,
+    :root[data-theme="dark"] .error-banner {
+      background: #2a1514;
+      color: #f0a8a0;
+      border-color: #4a2420;
+    }
+
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) .error-banner {
         background: #2a1514;
@@ -600,7 +605,7 @@
       }
     }
 
-    /* Modal */
+    /* Modal — above Computer panel (computer is z 400) */
     .modal-backdrop {
       position: fixed;
       inset: 0;
@@ -609,7 +614,7 @@
       align-items: center;
       justify-content: center;
       padding: 20px;
-      z-index: 100;
+      z-index: 600;
     }
 
     .modal-backdrop.open { display: flex; }
@@ -682,17 +687,18 @@
     }
 
     .pane-block {
-      background: #0d1117;
+      background: #0c0c0c;
       color: #c9d1d9;
       font-family: var(--mono);
-      font-size: 0.75rem;
-      line-height: 1.4;
-      padding: 12px 14px;
-      border-radius: 8px;
+      font-size: 12px;
+      line-height: 1.25;
+      padding: 10px 12px;
+      border-radius: 0 0 8px 8px;
       overflow: auto;
       max-height: 320px;
-      white-space: pre-wrap;
-      word-break: break-word;
+      white-space: pre;
+      word-break: normal;
+      tab-size: 8;
     }
 
     .pane-missing {
@@ -715,6 +721,387 @@
       overflow: auto;
     }
 
+    /* ========== Live terminal wall + immersive terminal chrome ========== */
+    .terminal-wall {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 14px;
+    }
+
+    .term-window {
+      background: #0a0c10;
+      border: 1px solid #2a3140;
+      border-radius: 10px;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255,255,255,0.04);
+      overflow: hidden;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      min-height: 220px;
+      transition: border-color 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
+      outline: none;
+    }
+
+    .term-window:hover,
+    .term-window:focus-visible {
+      border-color: var(--accent);
+      transform: translateY(-1px);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(107, 154, 255, 0.25);
+    }
+
+    .term-window.has-live {
+      border-color: rgba(61, 206, 132, 0.35);
+    }
+
+    .term-titlebar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      background: linear-gradient(180deg, #2a2f3a 0%, #1c212b 100%);
+      border-bottom: 1px solid #0a0c10;
+      user-select: none;
+      flex-shrink: 0;
+    }
+
+    .term-traffic {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .term-traffic span {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      display: inline-block;
+      box-shadow: inset 0 -1px 1px rgba(0,0,0,0.25);
+    }
+
+    .term-traffic .red { background: #ff5f57; }
+    .term-traffic .yellow { background: #febc2e; }
+    .term-traffic .green { background: #28c840; }
+
+    .term-title {
+      flex: 1;
+      min-width: 0;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: #c5cad3;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .term-title .alias {
+      color: #fff;
+      font-weight: 650;
+    }
+
+    .term-title .sep { color: #6b7382; margin: 0 4px; }
+
+    .term-badges {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .term-badge {
+      font-size: 0.65rem;
+      font-weight: 650;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: #12161e;
+      color: #9aa3b2;
+      font-family: var(--mono);
+    }
+
+    .term-badge.live {
+      background: #14261c;
+      color: #3dce84;
+    }
+
+    .term-badge.live::before {
+      content: "";
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #3dce84;
+      margin-right: 5px;
+      vertical-align: middle;
+      box-shadow: 0 0 6px #3dce84;
+      animation: pulse-live 1.4s ease-in-out infinite;
+    }
+
+    @keyframes pulse-live {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.35; }
+    }
+
+    .term-body {
+      position: relative;
+      flex: 1;
+      background: #0c0c0c;
+      color: #c9d1d9;
+      font-family: "SF Mono", "Menlo", "JetBrains Mono", "IBM Plex Mono", "Consolas", "Liberation Mono", monospace;
+      font-size: 11px;
+      line-height: 1.22;
+      letter-spacing: 0;
+      tab-size: 8;
+      overflow: auto;
+      padding: 8px 10px 14px;
+      white-space: pre;
+      word-break: normal;
+      min-height: 160px;
+      max-height: 260px;
+      scrollbar-width: thin;
+      scrollbar-color: #3a4150 #0c0c0c;
+    }
+
+    .term-body::-webkit-scrollbar { width: 10px; height: 10px; }
+    .term-body::-webkit-scrollbar-track { background: #0c0c0c; }
+    .term-body::-webkit-scrollbar-thumb { background: #3a4150; border-radius: 5px; }
+    .term-body::-webkit-scrollbar-thumb:hover { background: #525b6e; }
+
+    .term-body .term-content {
+      display: block;
+      min-width: max-content;
+    }
+
+    .term-cursor {
+      display: inline-block;
+      width: 0.6em;
+      height: 1.05em;
+      background: #c9d1d9;
+      margin-left: 1px;
+      vertical-align: text-bottom;
+      animation: cursor-blink 1.05s step-end infinite;
+    }
+
+    @keyframes cursor-blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .term-empty {
+      color: #6b7382;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      padding: 24px 12px;
+      text-align: center;
+      white-space: normal;
+    }
+
+    .term-footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 5px 10px;
+      background: #12161e;
+      border-top: 1px solid #1e2430;
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: #6b7382;
+      flex-shrink: 0;
+    }
+
+    .agent-card .mini-term {
+      margin-top: 10px;
+      background: #0c0c0c;
+      border: 1px solid #1e2430;
+      border-radius: 6px;
+      overflow: hidden;
+      max-height: 88px;
+      position: relative;
+    }
+
+    .agent-card .mini-term-body {
+      font-family: "SF Mono", "Menlo", monospace;
+      font-size: 9px;
+      line-height: 1.2;
+      color: #c9d1d9;
+      padding: 6px 8px;
+      white-space: pre;
+      overflow: hidden;
+      max-height: 88px;
+      opacity: 0.92;
+    }
+
+    .agent-card .mini-term::after {
+      content: "live pane · click to expand";
+      position: absolute;
+      right: 6px;
+      bottom: 4px;
+      font-size: 0.62rem;
+      font-weight: 650;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: #3dce84;
+      background: rgba(12,12,12,0.85);
+      padding: 2px 6px;
+      border-radius: 3px;
+      pointer-events: none;
+    }
+
+    .agent-card.has-pane {
+      border-color: rgba(61, 206, 132, 0.3);
+    }
+
+    /* Immersive terminal modal (fullscreen-ish) */
+    .modal-backdrop.term-mode {
+      padding: 12px;
+      background: rgba(4, 6, 10, 0.82);
+      backdrop-filter: blur(6px);
+    }
+
+    .modal.term-modal {
+      width: min(1200px, 100%);
+      max-height: min(96vh, 1100px);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: #0a0c10;
+      border-color: #2a3140;
+      padding: 0;
+    }
+
+    .modal.term-modal .modal-header {
+      display: none; /* title lives in terminal chrome */
+    }
+
+    .modal.term-modal .modal-body {
+      padding: 0;
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .term-immersive {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      height: min(92vh, 1040px);
+    }
+
+    .term-immersive .term-titlebar {
+      padding: 10px 14px;
+    }
+
+    .term-immersive .term-body {
+      flex: 1;
+      max-height: none;
+      min-height: 0;
+      font-size: 12.5px;
+      line-height: 1.25;
+      padding: 10px 12px 16px;
+    }
+
+    .term-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: #12161e;
+      border-bottom: 1px solid #1e2430;
+      flex-shrink: 0;
+    }
+
+    .term-toolbar .meta-bits {
+      flex: 1;
+      min-width: 0;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: #9aa3b2;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .term-toolbar button {
+      appearance: none;
+      border: 1px solid #2a3140;
+      background: #1a1f2a;
+      color: #e8ecf2;
+      border-radius: 6px;
+      padding: 5px 10px;
+      font: inherit;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+
+    .term-toolbar button:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .term-toolbar button.active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .term-side {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0;
+      border-top: 1px solid #1e2430;
+      background: var(--bg-elevated);
+      max-height: 28vh;
+      overflow: auto;
+      flex-shrink: 0;
+    }
+
+    .term-side.collapsed { display: none; }
+
+    .term-side-inner {
+      padding: 12px 16px 16px;
+    }
+
+    .term-side h3 {
+      margin: 0 0 8px;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+    }
+
+    .wall-empty {
+      grid-column: 1 / -1;
+      padding: 28px 16px;
+      text-align: center;
+      color: var(--text-faint);
+      background: var(--bg-elevated);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+      font-size: 0.9rem;
+    }
+
+    .section-head-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px 16px;
+      margin-bottom: 12px;
+    }
+
+    .section-head-row h2 {
+      margin: 0;
+    }
+
+    .section-head-row .hint {
+      color: var(--text-faint);
+      font-size: 0.8rem;
+    }
+
     footer.note {
       margin-top: 8px;
       color: var(--text-faint);
@@ -729,6 +1116,577 @@
       .feed-item { grid-template-columns: 56px 1fr; }
       .detail-grid { grid-template-columns: 1fr; gap: 2px 0; }
       .detail-grid .k { margin-top: 6px; }
+      .terminal-wall { grid-template-columns: 1fr; }
+      .term-immersive .term-body { font-size: 11px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .term-badge.live::before,
+      .term-cursor {
+        animation: none;
+      }
+    }
+
+    /* ========== Stats strip + view modes ========== */
+    .stats-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 10px;
+      margin: 4px 0 16px;
+    }
+    .stat-pill {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 12px 14px;
+      min-width: 0;
+    }
+    .stat-pill .n {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+      line-height: 1.1;
+    }
+    .stat-pill .l {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-faint);
+      margin-top: 4px;
+    }
+    .stat-pill.accent .n { color: var(--accent); }
+    .stat-pill.live .n { color: var(--live); }
+
+    .view-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 18px;
+      padding: 4px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      width: fit-content;
+      max-width: 100%;
+    }
+    .view-tabs button {
+      appearance: none;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .view-tabs button:hover { color: var(--text); background: var(--bg-muted); }
+    .view-tabs button.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+    .view-panel { display: none; }
+    .view-panel.active { display: block; }
+    .view-panel > section:first-child { margin-top: 4px; }
+    /* Prefer [hidden] attribute when present (setView toggles both) */
+    .view-panel[hidden] { display: none !important; }
+
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .filter-bar .chip {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      color: var(--text-muted);
+      font: inherit;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 5px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+    .filter-bar .chip.active {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+    .filter-bar .spacer { flex: 1; }
+    .filter-bar input[type="search"] {
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font: inherit;
+      font-size: 0.82rem;
+      min-width: 160px;
+    }
+
+    .agent-card.selected,
+    .term-window.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-soft);
+    }
+    .task-card.selected {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+    .task-card { cursor: pointer; }
+
+    /* ========== Sequence diagram (collaboration) ========== */
+    .collab-layout {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      gap: 14px;
+      min-height: 420px;
+    }
+    @media (max-width: 900px) {
+      .collab-layout { grid-template-columns: 1fr; }
+    }
+    .collab-side {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 12px;
+      max-height: 70vh;
+      overflow: auto;
+    }
+    .collab-side h3 {
+      margin: 0 0 8px;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+    }
+    .collab-thread {
+      display: block;
+      width: 100%;
+      text-align: left;
+      appearance: none;
+      border: 1px solid transparent;
+      background: var(--bg-muted);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 8px 10px;
+      margin-bottom: 6px;
+      font: inherit;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    .collab-thread:hover { border-color: var(--accent); }
+    .collab-thread.active {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+    .collab-thread .t-sub {
+      display: block;
+      color: var(--text-faint);
+      font-size: 0.72rem;
+      margin-top: 2px;
+    }
+    .seq-wrap {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: auto;
+      max-height: 70vh;
+      position: relative;
+    }
+    .seq-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: var(--bg-elevated);
+      z-index: 2;
+    }
+    .seq-toolbar .focus-label {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      flex: 1;
+      min-width: 0;
+    }
+    .seq-canvas {
+      padding: 12px 16px 24px;
+      min-width: min-content;
+    }
+    .seq-heads {
+      display: grid;
+      gap: 0;
+      margin-bottom: 4px;
+      position: sticky;
+      top: 48px;
+      background: var(--bg-elevated);
+      z-index: 1;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .seq-head {
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      font-weight: 650;
+      color: var(--text);
+      padding: 6px 4px;
+      border-radius: 6px;
+      background: var(--bg-muted);
+      margin: 0 6px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .seq-head.claude { box-shadow: inset 0 -2px 0 #7c5cbf; }
+    .seq-head.grok { box-shadow: inset 0 -2px 0 #2f6fed; }
+    .seq-head.focused {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+    .seq-row {
+      display: grid;
+      align-items: center;
+      min-height: 44px;
+      position: relative;
+      padding: 4px 0;
+    }
+    .seq-row::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        to right,
+        transparent 0,
+        transparent calc(var(--col-w) - 1px),
+        var(--border) calc(var(--col-w) - 1px),
+        var(--border) var(--col-w)
+      );
+      opacity: 0.55;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .seq-arrow {
+      position: relative;
+      z-index: 1;
+      height: 28px;
+      margin: 0 10px;
+      display: flex;
+      align-items: center;
+    }
+    .seq-arrow svg {
+      width: 100%;
+      height: 28px;
+      overflow: visible;
+    }
+    .seq-label {
+      position: absolute;
+      left: 50%;
+      top: -2px;
+      transform: translateX(-50%);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 0.68rem;
+      font-family: var(--mono);
+      color: var(--text-muted);
+      white-space: nowrap;
+      max-width: 90%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      pointer-events: none;
+    }
+    .seq-meta {
+      display: flex;
+      gap: 10px;
+      font-size: 0.7rem;
+      color: var(--text-faint);
+      font-family: var(--mono);
+      padding: 0 8px 2px;
+      position: relative;
+      z-index: 1;
+    }
+    .seq-kind-task { stroke: #7c5cbf; }
+    .seq-kind-message { stroke: var(--accent); }
+    .seq-kind-reply { stroke: var(--live); }
+    .seq-kind-transition { stroke: var(--quiet); }
+    .seq-kind-event { stroke: var(--text-faint); }
+    .seq-kind-register { stroke: #3dce84; }
+    .seq-empty {
+      padding: 40px 20px;
+      text-align: center;
+      color: var(--text-faint);
+      font-size: 0.9rem;
+    }
+    .seq-row.dim { opacity: 0.22; }
+    .seq-row.hi {
+      background: var(--accent-soft);
+      border-radius: 6px;
+    }
+    .help-callout {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      margin-bottom: 14px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .help-callout strong { color: var(--text); }
+
+    /* ---------- Computer voice panel (theme-aligned, not a separate skin) ---------- */
+    .computer-toggle {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      border: 1px solid var(--border);
+      font-size: 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: var(--shadow), 0 8px 24px rgba(0,0,0,0.18);
+      z-index: 400;
+      user-select: none;
+      transition: transform 0.12s ease, background 0.12s ease;
+    }
+    .computer-toggle:hover { transform: translateY(-1px); filter: brightness(1.05); }
+    .computer-toggle:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+    .computer-panel {
+      position: fixed;
+      right: 20px;
+      bottom: 84px;
+      width: min(340px, calc(100vw - 40px));
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      z-index: 400;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.22), var(--shadow);
+      font-family: var(--font);
+      color: var(--text);
+    }
+    .computer-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-muted);
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 14px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+    }
+    .computer-header span::before {
+      content: "";
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--live);
+      margin-right: 8px;
+      vertical-align: middle;
+      box-shadow: 0 0 0 3px var(--live-bg);
+    }
+    .computer-close {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .computer-close:hover { border-color: var(--accent); color: var(--accent); }
+    .computer-phrase {
+      color: var(--accent);
+      background: var(--accent-soft);
+      padding: 8px 14px;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      font-weight: 700;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--mono);
+    }
+    .computer-transcript {
+      max-height: 160px;
+      overflow-y: auto;
+      padding: 10px 14px;
+      font-size: 0.8rem;
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background: var(--bg-elevated);
+    }
+    .computer-line {
+      border-left: 2px solid var(--border);
+      padding-left: 8px;
+      word-break: break-word;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+    }
+    .computer-line.you { border-left-color: var(--live); color: var(--text); }
+    .computer-line.tools {
+      border-left-color: var(--accent);
+      color: var(--text-muted);
+      font-family: var(--mono);
+      font-size: 0.7rem;
+    }
+    .computer-line.sys { border-left-color: var(--text-faint); color: var(--text-faint); font-size: 0.7rem; }
+    .computer-help {
+      max-height: 110px;
+      overflow-y: auto;
+      padding: 8px 12px 10px;
+      border-top: 1px solid var(--border);
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+      background: var(--bg-muted);
+    }
+    .computer-help strong { color: var(--text); }
+    .computer-help code {
+      font-family: var(--mono);
+      font-size: 0.66rem;
+      color: var(--accent);
+    }
+    .computer-mic {
+      display: block;
+      margin: 10px auto 6px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 1.4rem;
+      cursor: pointer;
+      transition: border-color 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+    }
+    .computer-mic:hover { border-color: var(--accent); }
+    .computer-mic.active {
+      background: var(--live-bg);
+      border-color: var(--live);
+      color: var(--live);
+      box-shadow: 0 0 0 4px var(--live-bg);
+      animation: mic-pulse 1.6s ease-in-out infinite;
+    }
+    .computer-mic.hearing {
+      background: var(--quiet-bg);
+      border-color: var(--quiet);
+      color: var(--quiet);
+      box-shadow: 0 0 0 5px var(--quiet-bg);
+      animation: mic-pulse 0.55s ease-in-out infinite;
+    }
+    .computer-mic.speaking {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: 0 0 0 4px var(--accent-soft);
+    }
+    @keyframes mic-pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.04); }
+    }
+    .computer-vad-meter {
+      height: 5px;
+      margin: 0 16px 8px;
+      background: var(--bg-muted);
+      border-radius: 3px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .computer-vad-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--live);
+      transition: width 0.05s linear;
+    }
+    .computer-hint {
+      text-align: center;
+      color: var(--text-faint);
+      font-size: 0.7rem;
+      padding: 0 12px 10px;
+      letter-spacing: 0.02em;
+    }
+    .computer-flash {
+      animation: computer-flash-anim 0.85s ease-out;
+    }
+    @keyframes computer-flash-anim {
+      0% { box-shadow: 0 0 0 0 var(--accent); }
+      100% { box-shadow: 0 0 0 18px transparent; }
+    }
+
+    /* Polish: cohesive chrome for tabs / stats / sections */
+    .stats-strip {
+      margin-top: 4px;
+    }
+    .stat-pill .n {
+      font-variant-numeric: tabular-nums;
+    }
+    .view-tabs {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(8px);
+      background: var(--bg-elevated);
+    }
+    .view-panel.active {
+      animation: view-in 0.18s ease;
+    }
+    @keyframes view-in {
+      from { opacity: 0.55; transform: translateY(4px); }
+      to { opacity: 1; transform: none; }
+    }
+    .section-head-row h2 {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    footer.note {
+      padding-bottom: 8px;
+    }
+    /* When computer panel open, don't let it cover critical content on narrow screens */
+    @media (max-width: 720px) {
+      .computer-panel {
+        left: 12px;
+        right: 12px;
+        width: auto;
+        bottom: 78px;
+      }
+      .computer-toggle { right: 14px; bottom: 14px; }
     }
   </style>
 </head>
@@ -744,32 +1702,101 @@
 
   <div id="error-banner" class="error-banner" style="display:none" role="alert"></div>
 
-  <section aria-labelledby="fleet-heading">
-    <h2 id="fleet-heading">Fleet overview</h2>
-    <div class="legend" role="group" aria-label="Agent status legend">
-      <span class="legend-item"><span class="status-dot live" aria-hidden="true"></span> live — seen within ~60s</span>
-      <span class="legend-item"><span class="status-dot quiet" aria-hidden="true"></span> quiet — stale but present</span>
-      <span class="legend-item"><span class="status-dot departed" aria-hidden="true"></span> departed — offline / gone</span>
+  <div id="stats-strip" class="stats-strip" aria-label="Fleet stats"></div>
+
+  <div class="view-tabs" role="tablist" aria-label="Dashboard views">
+    <button type="button" role="tab" class="active" data-view="fleet" id="tab-fleet" aria-selected="true">Fleet</button>
+    <button type="button" role="tab" data-view="collab" id="tab-collab" aria-selected="false">Collaboration · sequence</button>
+    <button type="button" role="tab" data-view="terminals" id="tab-terminals" aria-selected="false">Terminals only</button>
+  </div>
+
+  <div id="view-fleet" class="view-panel active" role="tabpanel">
+    <section aria-labelledby="terminals-heading">
+      <div class="section-head-row">
+        <h2 id="terminals-heading">Live terminals</h2>
+        <span class="hint" id="terminals-hint">tmux pane capture · click any window to go fullscreen</span>
+      </div>
+      <div id="terminal-wall" class="terminal-wall" aria-live="polite"></div>
+    </section>
+
+    <section aria-labelledby="fleet-heading">
+      <div class="section-head-row">
+        <h2 id="fleet-heading">Fleet overview</h2>
+        <span class="hint">click a worker to focus collaboration · open terminal if it has a live pane</span>
+      </div>
+      <div class="filter-bar" id="fleet-filters">
+        <button type="button" class="chip active" data-filter="all">All</button>
+        <button type="button" class="chip" data-filter="live">Live</button>
+        <button type="button" class="chip" data-filter="grok">Grok</button>
+        <button type="button" class="chip" data-filter="claude">Claude</button>
+        <button type="button" class="chip" data-filter="hub">Hub</button>
+        <button type="button" class="chip" data-filter="spoke">Spoke</button>
+        <span class="spacer"></span>
+        <input type="search" id="agent-search" placeholder="Filter aliases…" autocomplete="off" />
+      </div>
+      <div class="legend" role="group" aria-label="Agent status legend">
+        <span class="legend-item"><span class="status-dot live" aria-hidden="true"></span> live — seen within ~60s</span>
+        <span class="legend-item"><span class="status-dot quiet" aria-hidden="true"></span> quiet — stale but present</span>
+        <span class="legend-item"><span class="status-dot departed" aria-hidden="true"></span> departed — offline / gone</span>
+      </div>
+      <div id="agent-grid" class="agent-grid"></div>
+      <div id="token-bars" class="token-bars" style="display:none"></div>
+    </section>
+
+    <section aria-labelledby="tasks-heading">
+      <h2 id="tasks-heading">Task board</h2>
+      <div id="kanban" class="kanban"></div>
+    </section>
+
+    <section aria-labelledby="feed-heading">
+      <h2 id="feed-heading">Activity feed</h2>
+      <div id="feed" class="feed"></div>
+    </section>
+  </div>
+
+  <div id="view-collab" class="view-panel" role="tabpanel" hidden>
+    <div class="help-callout">
+      <strong>Sequence diagram mode</strong> — lifelines are workers; arrows are muster bus traffic
+      (tasks, messages, replies, transitions). Select a worker or thread to highlight their collaboration.
+      Click a lifeline header to focus that agent; double-click a worker with a live pane to open its terminal.
     </div>
-    <div id="agent-grid" class="agent-grid"></div>
-    <div id="token-bars" class="token-bars" style="display:none"></div>
-  </section>
+    <div class="collab-layout">
+      <aside class="collab-side">
+        <h3>Threads</h3>
+        <button type="button" class="collab-thread active" data-thread="" id="thread-all">
+          All traffic
+          <span class="t-sub">fleet-wide sequence</span>
+        </button>
+        <div id="thread-list"></div>
+        <h3 style="margin-top:14px">Focused agent</h3>
+        <div id="focus-agent-list"></div>
+      </aside>
+      <div class="seq-wrap">
+        <div class="seq-toolbar">
+          <span class="focus-label" id="seq-focus-label">Showing all collaboration</span>
+          <button type="button" class="ghost" id="seq-clear-focus">Clear focus</button>
+          <button type="button" class="ghost" id="seq-scroll-latest">Jump to latest</button>
+        </div>
+        <div class="seq-canvas" id="seq-canvas"></div>
+      </div>
+    </div>
+  </div>
 
-  <section aria-labelledby="tasks-heading">
-    <h2 id="tasks-heading">Task board</h2>
-    <div id="kanban" class="kanban"></div>
-  </section>
+  <div id="view-terminals" class="view-panel" role="tabpanel" hidden>
+    <section aria-labelledby="terminals-only-heading">
+      <div class="section-head-row">
+        <h2 id="terminals-only-heading">Live terminals</h2>
+        <span class="hint">fullscreen workspace for pane drilling</span>
+      </div>
+      <div id="terminal-wall-full" class="terminal-wall" aria-live="polite"></div>
+    </section>
+  </div>
 
-  <section aria-labelledby="feed-heading">
-    <h2 id="feed-heading">Activity feed</h2>
-    <div id="feed" class="feed"></div>
-  </section>
-
-  <footer class="note">Polling <code>/api/status</code> every 3s · same-origin</footer>
+  <footer class="note">Polling <code>/api/status</code> every 3s · live terminal open → <code>/api/pane</code> every 1s · same-origin</footer>
 
   <div class="modal-backdrop" id="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-title" hidden>
-    <div class="modal">
-      <div class="modal-header">
+    <div class="modal" id="modal">
+      <div class="modal-header" id="modal-header">
         <div>
           <h2 id="modal-title">Agent</h2>
           <div class="agent-sub" id="modal-sub"></div>
@@ -780,11 +1807,34 @@
     </div>
   </div>
 
+  <button type="button" class="computer-toggle" id="computer-toggle" aria-label="Toggle Computer voice panel" title="Computer">🖖</button>
+  <div class="computer-panel" id="computer-panel" hidden>
+    <div class="computer-header">
+      <span>COMPUTER</span>
+      <button type="button" class="computer-close" id="computer-close" aria-label="Close Computer panel">×</button>
+    </div>
+    <div class="computer-phrase" id="computer-phrase">STANDING BY</div>
+    <div class="computer-transcript" id="computer-transcript"></div>
+    <button type="button" class="computer-mic" id="computer-mic" aria-label="Toggle continuous listening" aria-pressed="false">🎙</button>
+    <div class="computer-vad-meter" aria-hidden="true"><div class="computer-vad-fill" id="computer-vad-fill"></div></div>
+    <div class="computer-hint" id="computer-hint">tap mic · continuous listen + VAD interrupt</div>
+    <div class="computer-help" id="computer-help">
+      <strong>Try saying:</strong><br/>
+      <code>Open collaboration on screen</code><br/>
+      <code>Show fleet overview</code><br/>
+      <code>Show me the terminal for Claude</code><br/>
+      <code>Focus Spoke A</code> · <code>Filter live</code><br/>
+      <code>List the fleet</code> · <code>Report status</code><br/>
+      Names: Claude, Grok Hub A/B/C, Spoke A/B
+    </div>
+  </div>
+
   <script>
 (function () {
   "use strict";
 
   var POLL_MS = 3000;
+  var PANE_POLL_MS = 1000;
   var LIVE_MS = 60 * 1000;
   var QUIET_MS = 5 * 60 * 1000;
   var TASK_STATUSES = [
@@ -810,8 +1860,23 @@
     agents: [],
     threads: [],
     events: [],
+    entries: [],
+    collaboration: { lifelines: [], messages: [] },
     selectedAlias: null,
-    lastPayloadKey: null
+    lastPayloadKey: null,
+    // Immersive terminal viewer state
+    termMode: false,
+    stickBottom: true,
+    showDetails: true,
+    panePollTimer: null,
+    lastPaneText: null,
+    lastPaneMeta: null,
+    // UX / collaboration focus
+    view: "fleet", // fleet | collab | terminals
+    fleetFilter: "all",
+    agentQuery: "",
+    focusAlias: null,
+    focusThreadId: null
   };
 
   var el = {
@@ -819,11 +1884,21 @@
     pollStatus: document.getElementById("poll-status"),
     lastUpdated: document.getElementById("last-updated"),
     errorBanner: document.getElementById("error-banner"),
+    statsStrip: document.getElementById("stats-strip"),
+    terminalWall: document.getElementById("terminal-wall"),
+    terminalWallFull: document.getElementById("terminal-wall-full"),
+    terminalsHint: document.getElementById("terminals-hint"),
     agentGrid: document.getElementById("agent-grid"),
     tokenBars: document.getElementById("token-bars"),
     kanban: document.getElementById("kanban"),
     feed: document.getElementById("feed"),
+    seqCanvas: document.getElementById("seq-canvas"),
+    threadList: document.getElementById("thread-list"),
+    focusAgentList: document.getElementById("focus-agent-list"),
+    seqFocusLabel: document.getElementById("seq-focus-label"),
     backdrop: document.getElementById("modal-backdrop"),
+    modal: document.getElementById("modal"),
+    modalHeader: document.getElementById("modal-header"),
     modalTitle: document.getElementById("modal-title"),
     modalSub: document.getElementById("modal-sub"),
     modalBody: document.getElementById("modal-body"),
@@ -1006,6 +2081,15 @@
         else if (code === 48 && params[p+1] === 5 && params[p+2] != null) {
           bg = color256(params[p+2]); p += 2;
         }
+        else if (code === 38 && params[p+1] === 2 && params[p+4] != null) {
+          // truecolor 38;2;r;g;b
+          fg = "rgb(" + Number(params[p+2]) + "," + Number(params[p+3]) + "," + Number(params[p+4]) + ")";
+          p += 4;
+        }
+        else if (code === 48 && params[p+1] === 2 && params[p+4] != null) {
+          bg = "rgb(" + Number(params[p+2]) + "," + Number(params[p+3]) + "," + Number(params[p+4]) + ")";
+          p += 4;
+        }
         else if (code === 39) { fg = null; }
         else if (code === 49) { bg = null; }
       }
@@ -1163,20 +2247,36 @@
         tokenTile = "—";
       }
 
+      var hasPane = !!(a.pane_snapshot && String(a.pane_snapshot).length);
+      var miniTerm = "";
+      if (hasPane) {
+        // last ~12 non-empty visual lines for the card teaser
+        var lines = String(a.pane_snapshot).split("\n");
+        var tail = lines.slice(Math.max(0, lines.length - 12)).join("\n");
+        miniTerm =
+          '<div class="mini-term" aria-hidden="true"><div class="mini-term-body">' +
+          ansiToHtml(tail) +
+          "</div></div>";
+      }
+
       return (
-        '<article class="agent-card" tabindex="0" role="button" data-alias="' +
+        '<article class="agent-card' +
+        (hasPane ? " has-pane" : "") +
+        '" tabindex="0" role="button" data-alias="' +
         escapeHtml(a.alias) +
-        '" aria-label="Open details for ' +
-        escapeHtml(a.alias) +
+        '" aria-label="Open terminal for ' +
+        escapeHtml(displayName(a.alias)) +
         '">' +
         '<div class="agent-card-head">' +
         '<div>' +
         '<div class="agent-alias">' +
-        escapeHtml(a.alias) +
+        escapeHtml(displayName(a.alias)) +
         '<span class="machine-tag">' +
         escapeHtml(a.machine || "?") +
         "</span></div>" +
         '<div class="agent-sub">' +
+        escapeHtml(a.alias) +
+        " · " +
         escapeHtml(a.role || "—") +
         " · " +
         escapeHtml(a.model_type || "—") +
@@ -1209,6 +2309,7 @@
         "</div></div>" +
         "</div>" +
         tokenNote +
+        miniTerm +
         "</article>"
       );
   }
@@ -1499,7 +2600,7 @@
       .join("");
   }
 
-  /* ---------- modal / drill-down ---------- */
+  /* ---------- live terminal wall + immersive drill-down ---------- */
   function findAgent(alias) {
     for (var i = 0; i < state.agents.length; i++) {
       if (state.agents[i].alias === alias) return state.agents[i];
@@ -1507,26 +2608,297 @@
     return null;
   }
 
+  function hasLivePane(a) {
+    if (!a) return false;
+    if (a.has_live_pane === true) return true;
+    return !!(a.pane_snapshot && String(a.pane_snapshot).length > 0);
+  }
+
+  function paneMetaLine(a) {
+    var m = a.pane_meta || state.lastPaneMeta || {};
+    var bits = [];
+    if (m.session) bits.push(m.session);
+    else if (a.session_name) bits.push(a.session_name);
+    if (m.width && m.height) bits.push(m.width + "×" + m.height);
+    if (m.command) bits.push(m.command);
+    if (a.pane_id) bits.push("pane " + a.pane_id);
+    if (m.title) bits.push(m.title);
+    return bits.join(" · ") || "no tmux pane metadata";
+  }
+
+  function termTitlebarHtml(a, immersive) {
+    var meta = a.pane_meta || {};
+    var size =
+      meta.width && meta.height ? meta.width + "×" + meta.height : "—";
+    var live = hasLivePane(a);
+    var human = displayName(a.alias);
+    var titleBits =
+      '<span class="alias">' +
+      escapeHtml(human) +
+      "</span>" +
+      '<span class="sep">·</span>' +
+      escapeHtml(a.model_type || "?") +
+      '<span class="sep">·</span>' +
+      escapeHtml(a.machine || "?") +
+      (a.alias && human !== a.alias
+        ? '<span class="sep">·</span>' + escapeHtml(a.alias)
+        : "") +
+      (meta.session
+        ? '<span class="sep">·</span>' + escapeHtml(meta.session)
+        : a.session_name
+          ? '<span class="sep">·</span>' + escapeHtml(a.session_name)
+          : "");
+    return (
+      '<div class="term-titlebar">' +
+      '<div class="term-traffic" aria-hidden="true">' +
+      '<span class="red"></span><span class="yellow"></span><span class="green"></span>' +
+      "</div>" +
+      '<div class="term-title" title="' +
+      escapeHtml(human + " (" + a.alias + ")") +
+      '">' +
+      titleBits +
+      "</div>" +
+      '<div class="term-badges">' +
+      (live
+        ? '<span class="term-badge live">live</span>'
+        : '<span class="term-badge">no pane</span>') +
+      '<span class="term-badge">' +
+      escapeHtml(size) +
+      "</span>" +
+      (immersive
+        ? '<button type="button" class="modal-close" id="modal-close-inline" aria-label="Close terminal" style="width:28px;height:28px;margin-left:4px">×</button>'
+        : "") +
+      "</div></div>"
+    );
+  }
+
+  function termBodyHtml(snapshot, withCursor) {
+    if (snapshot == null || String(snapshot).length === 0) {
+      return (
+        '<div class="term-body"><div class="term-empty">' +
+        "No live pane available.<br/>" +
+        "Needs a real tmux TUI (Claude Code on hub, or native Grok CLI). " +
+        "Headless hub Grok loops (npm grok-cli workaround) have no pane to capture." +
+        "</div></div>"
+      );
+    }
+    return (
+      '<div class="term-body" data-term-scroll="1">' +
+      '<span class="term-content">' +
+      ansiToHtml(snapshot) +
+      (withCursor ? '<span class="term-cursor" aria-hidden="true"></span>' : "") +
+      "</span></div>"
+    );
+  }
+
+  function renderTerminalWall(agents) {
+    if (!el.terminalWall) return;
+    var now = Date.now();
+    // Server already dedupes by machine+pane_id; belt-and-suspenders here so
+    // the wall never shows the same tmux pane under two aliases.
+    var withPane = [];
+    var seenPaneKeys = {};
+    (agents || []).forEach(function (a) {
+      if (!hasLivePane(a) || a.departed) return;
+      var key = (a.machine || "?") + "|" + (a.pane_id || a.alias);
+      if (seenPaneKeys[key]) return;
+      seenPaneKeys[key] = true;
+      withPane.push(a);
+    });
+    var withoutButRegistered = (agents || []).filter(function (a) {
+      return !a.departed && !hasLivePane(a) && classifyAgent(a, now) !== "departed";
+    });
+
+    if (el.terminalsHint) {
+      el.terminalsHint.textContent =
+        withPane.length +
+        " live pane" +
+        (withPane.length === 1 ? "" : "s") +
+        " · click to expand fullscreen · refreshes live while open";
+    }
+
+    if (!withPane.length) {
+      el.terminalWall.innerHTML =
+        '<div class="wall-empty">' +
+        "No live tmux panes right now. Spawn a Claude Code or Grok TUI with " +
+        "<code>muster-spawn-tui</code>, or open an existing registered session that has a pane_id. " +
+        (withoutButRegistered.length
+          ? withoutButRegistered.length +
+            " registered agent" +
+            (withoutButRegistered.length === 1 ? "" : "s") +
+            " are headless / no pane."
+          : "") +
+        "</div>";
+      return;
+    }
+
+    el.terminalWall.innerHTML = withPane
+      .map(function (a) {
+        var snap = String(a.pane_snapshot || "");
+        // Wall shows the bottom of the pane — what you'd see at the prompt
+        var lines = snap.split("\n");
+        var visible = lines.slice(Math.max(0, lines.length - 28)).join("\n");
+        return (
+          '<article class="term-window has-live" tabindex="0" role="button" data-alias="' +
+          escapeHtml(a.alias) +
+          '" aria-label="Open live terminal for ' +
+          escapeHtml(a.alias) +
+          '">' +
+          termTitlebarHtml(a, false) +
+          termBodyHtml(visible, true) +
+          '<div class="term-footer"><span>' +
+          escapeHtml(paneMetaLine(a)) +
+          "</span><span>click to expand</span></div>" +
+          "</article>"
+        );
+      })
+      .join("");
+  }
+
+  function stopPanePoll() {
+    if (state.panePollTimer) {
+      clearInterval(state.panePollTimer);
+      state.panePollTimer = null;
+    }
+  }
+
+  function startPanePoll() {
+    stopPanePoll();
+    if (!state.selectedAlias || !state.termMode) return;
+    state.panePollTimer = setInterval(function () {
+      pollPane(state.selectedAlias);
+    }, PANE_POLL_MS);
+  }
+
+  async function pollPane(alias) {
+    try {
+      var res = await fetch(
+        "/api/pane?alias=" + encodeURIComponent(alias),
+        { headers: { Accept: "application/json" }, cache: "no-store" }
+      );
+      if (!res.ok) return;
+      var data = await res.json();
+      // Mirror into agent so wall + modal stay in sync
+      var a = findAgent(alias);
+      if (a) {
+        if (data.pane_snapshot != null) a.pane_snapshot = data.pane_snapshot;
+        if (data.pane_meta) a.pane_meta = data.pane_meta;
+        a.has_live_pane = !!data.has_live_pane;
+      }
+      if (state.selectedAlias === alias && state.termMode) {
+        updateImmersivePane(data);
+      }
+    } catch (e) {
+      /* keep last good frame */
+    }
+  }
+
+  function isNearBottom(node) {
+    if (!node) return true;
+    var slack = 48;
+    return node.scrollHeight - node.scrollTop - node.clientHeight <= slack;
+  }
+
+  function applyStickBottom(body) {
+    if (!body) return;
+    if (state.stickBottom) {
+      body.scrollTop = body.scrollHeight;
+      body.scrollLeft = 0;
+    }
+  }
+
+  function updateImmersivePane(data) {
+    var body = el.modalBody.querySelector("[data-term-scroll]");
+    var content = el.modalBody.querySelector(".term-content");
+    var footerMeta = el.modalBody.querySelector("[data-pane-meta]");
+    var snap = data.pane_snapshot;
+    var text = snap == null ? "" : String(snap);
+
+    // Preserve scroll-away: if user has scrolled up, don't yank them back.
+    // If they are still near the bottom, keep following new output.
+    if (body && isNearBottom(body)) {
+      state.stickBottom = true;
+      var btnStick = document.getElementById("btn-stick");
+      if (btnStick) btnStick.classList.add("active");
+    }
+
+    if (content && text !== state.lastPaneText) {
+      content.innerHTML =
+        ansiToHtml(text) +
+        (text ? '<span class="term-cursor" aria-hidden="true"></span>' : "");
+      state.lastPaneText = text;
+      applyStickBottom(body);
+    }
+
+    if (data.pane_meta) state.lastPaneMeta = data.pane_meta;
+    if (footerMeta) {
+      var fake = {
+        alias: data.alias,
+        pane_id: data.pane_id,
+        session_name: data.session_name,
+        pane_meta: data.pane_meta || state.lastPaneMeta
+      };
+      footerMeta.textContent = paneMetaLine(fake);
+    }
+
+    var sizeBadge = el.modalBody.querySelector("[data-size-badge]");
+    if (sizeBadge && data.pane_meta && data.pane_meta.width) {
+      sizeBadge.textContent =
+        data.pane_meta.width + "×" + data.pane_meta.height;
+    }
+
+    var liveBadge = el.modalBody.querySelector("[data-live-badge]");
+    if (liveBadge) {
+      if (data.has_live_pane) {
+        liveBadge.className = "term-badge live";
+        liveBadge.textContent = "live";
+      } else {
+        liveBadge.className = "term-badge";
+        liveBadge.textContent = "no pane";
+      }
+    }
+
+    var captured = el.modalBody.querySelector("[data-captured]");
+    if (captured && data.captured_at) {
+      captured.textContent = "captured " + new Date(data.captured_at).toLocaleTimeString();
+    }
+  }
+
   function openModal(alias) {
     var a = findAgent(alias);
     if (!a) return;
     state.selectedAlias = alias;
+    state.termMode = true;
+    state.stickBottom = true;
+    state.lastPaneText = null;
+    state.lastPaneMeta = a.pane_meta || null;
     renderModal(a);
-    el.backdrop.classList.add("open");
+    el.backdrop.classList.add("open", "term-mode");
     el.backdrop.hidden = false;
-    el.modalClose.focus();
+    if (el.modal) el.modal.classList.add("term-modal");
+    startPanePoll();
+    // Immediate refresh for freshest frame
+    pollPane(alias);
+    var closeBtn =
+      document.getElementById("modal-close-inline") || el.modalClose;
+    if (closeBtn) closeBtn.focus();
   }
 
   function closeModal() {
     state.selectedAlias = null;
-    el.backdrop.classList.remove("open");
+    state.termMode = false;
+    state.lastPaneText = null;
+    stopPanePoll();
+    el.backdrop.classList.remove("open", "term-mode");
     el.backdrop.hidden = true;
+    if (el.modal) el.modal.classList.remove("term-modal");
   }
 
   function renderModal(a) {
     var now = Date.now();
     var st = classifyAgent(a, now);
     var act = a.activity || {};
+    var meta = a.pane_meta || state.lastPaneMeta || {};
 
     el.modalTitle.textContent = a.alias || "Agent";
     el.modalSub.textContent =
@@ -1563,16 +2935,18 @@
       act.last_message_preview ||
       (act.source === "none" ? "(no recent session activity)" : "—");
 
-    var paneHtml;
-    if (a.pane_snapshot != null && String(a.pane_snapshot).length > 0) {
-      paneHtml =
-        '<div class="pane-block">' + ansiToHtml(a.pane_snapshot) + "</div>";
-    } else {
-      paneHtml =
-        '<div class="pane-missing">No live pane available (tmux not installed on this machine, or agent has no tmux pane). Expected for spoke agents right now.</div>';
-    }
+    var snap =
+      a.pane_snapshot != null ? String(a.pane_snapshot) : state.lastPaneText || "";
+    state.lastPaneText = snap;
 
-    el.modalBody.innerHTML =
+    var size =
+      meta.width && meta.height ? meta.width + "×" + meta.height : "—";
+
+    var detailsHtml =
+      '<div class="term-side' +
+      (state.showDetails ? "" : " collapsed") +
+      '" id="term-side">' +
+      '<div class="term-side-inner">' +
       '<div class="detail-grid">' +
       '<div class="k">Status</div><div class="v"><span class="status-badge ' +
       st +
@@ -1606,27 +2980,182 @@
             : "")
         : "—") +
       "</div>" +
+      '<div class="k">Pane</div><div class="v">' +
+      escapeHtml(paneMetaLine(a)) +
       "</div>" +
-      "<h3 style=\"margin:0 0 8px;font-size:0.82rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.03em\">Last message preview</h3>" +
+      "</div>" +
+      "<h3>Last message preview</h3>" +
       '<div class="preview-block">' +
       escapeHtml(preview) +
       "</div>" +
-      "<h3 style=\"margin:16px 0 8px;font-size:0.82rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.03em\">Pane snapshot</h3>" +
-      paneHtml;
+      "</div></div>";
+
+    el.modalBody.innerHTML =
+      '<div class="term-immersive">' +
+      '<div class="term-titlebar">' +
+      '<div class="term-traffic" aria-hidden="true">' +
+      '<span class="red"></span><span class="yellow"></span><span class="green"></span>' +
+      "</div>" +
+      '<div class="term-title"><span class="alias">' +
+      escapeHtml(a.alias) +
+      "</span><span class=\"sep\">·</span>" +
+      escapeHtml(a.model_type || "?") +
+      '<span class="sep">·</span>' +
+      escapeHtml(a.machine || "?") +
+      (meta.session
+        ? '<span class="sep">·</span>' + escapeHtml(meta.session)
+        : "") +
+      "</div>" +
+      '<div class="term-badges">' +
+      '<span class="term-badge' +
+      (hasLivePane(a) ? " live" : "") +
+      '" data-live-badge>' +
+      (hasLivePane(a) ? "live" : "no pane") +
+      "</span>" +
+      '<span class="term-badge" data-size-badge>' +
+      escapeHtml(size) +
+      "</span>" +
+      '<button type="button" class="modal-close" id="modal-close-inline" aria-label="Close terminal">×</button>' +
+      "</div></div>" +
+      '<div class="term-toolbar">' +
+      '<div class="meta-bits" data-pane-meta>' +
+      escapeHtml(paneMetaLine(a)) +
+      "</div>" +
+      '<span data-captured class="meta-bits" style="flex:0 0 auto;max-width:40%"></span>' +
+      '<button type="button" id="btn-stick" class="' +
+      (state.stickBottom ? "active" : "") +
+      '">Follow scroll</button>' +
+      '<button type="button" id="btn-details" class="' +
+      (state.showDetails ? "active" : "") +
+      '">Details</button>' +
+      '<button type="button" id="btn-copy">Copy text</button>' +
+      '<button type="button" id="btn-refresh">Refresh</button>' +
+      "</div>" +
+      (snap
+        ? '<div class="term-body" data-term-scroll="1"><span class="term-content">' +
+          ansiToHtml(snap) +
+          '<span class="term-cursor" aria-hidden="true"></span></span></div>'
+        : termBodyHtml(null, false)) +
+      '<div class="term-footer"><span data-pane-meta>' +
+      escapeHtml(paneMetaLine(a)) +
+      "</span><span>1s live refresh while open · Esc to close</span></div>" +
+      detailsHtml +
+      "</div>";
+
+    // Wire toolbar after inject
+    var closeInline = document.getElementById("modal-close-inline");
+    if (closeInline) closeInline.addEventListener("click", closeModal);
+
+    var btnStick = document.getElementById("btn-stick");
+    if (btnStick) {
+      btnStick.addEventListener("click", function () {
+        state.stickBottom = !state.stickBottom;
+        btnStick.classList.toggle("active", state.stickBottom);
+        if (state.stickBottom) {
+          applyStickBottom(el.modalBody.querySelector("[data-term-scroll]"));
+        }
+      });
+    }
+
+    var btnDetails = document.getElementById("btn-details");
+    if (btnDetails) {
+      btnDetails.addEventListener("click", function () {
+        state.showDetails = !state.showDetails;
+        btnDetails.classList.toggle("active", state.showDetails);
+        var side = document.getElementById("term-side");
+        if (side) side.classList.toggle("collapsed", !state.showDetails);
+      });
+    }
+
+    var btnCopy = document.getElementById("btn-copy");
+    if (btnCopy) {
+      btnCopy.addEventListener("click", function () {
+        var raw = state.lastPaneText || a.pane_snapshot || "";
+        // strip ANSI for clipboard
+        var plain = String(raw).replace(/\x1b\[[0-9;?]*[A-Za-z]/g, "").replace(/\x1b\][^\x07]*(?:\x07|\x1b\\)/g, "");
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(plain).then(
+            function () {
+              btnCopy.textContent = "Copied";
+              setTimeout(function () {
+                btnCopy.textContent = "Copy text";
+              }, 1200);
+            },
+            function () {}
+          );
+        }
+      });
+    }
+
+    var btnRefresh = document.getElementById("btn-refresh");
+    if (btnRefresh) {
+      btnRefresh.addEventListener("click", function () {
+        pollPane(a.alias);
+      });
+    }
+
+    var body = el.modalBody.querySelector("[data-term-scroll]");
+    if (body) {
+      body.addEventListener("scroll", function () {
+        // User scrolled up → stop following until they re-stick or hit bottom
+        if (!isNearBottom(body)) {
+          state.stickBottom = false;
+          if (btnStick) btnStick.classList.remove("active");
+        } else {
+          state.stickBottom = true;
+          if (btnStick) btnStick.classList.add("active");
+        }
+      });
+      // initial stick
+      requestAnimationFrame(function () {
+        applyStickBottom(body);
+      });
+    }
   }
 
-  el.agentGrid.addEventListener("click", function (e) {
-    var card = e.target.closest(".agent-card");
-    if (card) openModal(card.getAttribute("data-alias"));
-  });
+  function onSelectAlias(e) {
+    var card =
+      e.target.closest(".agent-card") || e.target.closest(".term-window");
+    if (!card) return;
+    var alias = card.getAttribute("data-alias");
+    var a = findAgent(alias);
+    setFocusAlias(alias, false);
+    // Live pane → open real terminal; otherwise jump to collaboration focus
+    if (a && hasLivePane(a)) {
+      openModal(alias);
+    } else {
+      setView("collab");
+      renderCollaboration();
+    }
+  }
 
-  el.agentGrid.addEventListener("keydown", function (e) {
+  function onKeySelectAlias(e) {
     if (e.key !== "Enter" && e.key !== " ") return;
-    var card = e.target.closest(".agent-card");
+    var card =
+      e.target.closest(".agent-card") || e.target.closest(".term-window");
     if (!card) return;
     e.preventDefault();
-    openModal(card.getAttribute("data-alias"));
-  });
+    onSelectAlias({ target: card });
+  }
+
+  el.agentGrid.addEventListener("click", onSelectAlias);
+  el.agentGrid.addEventListener("keydown", onKeySelectAlias);
+  if (el.terminalWall) {
+    el.terminalWall.addEventListener("click", onSelectAlias);
+    el.terminalWall.addEventListener("keydown", onKeySelectAlias);
+  }
+  if (el.terminalWallFull) {
+    el.terminalWallFull.addEventListener("click", onSelectAlias);
+    el.terminalWallFull.addEventListener("keydown", onKeySelectAlias);
+  }
+  // Task cards → focus thread sequence
+  if (el.kanban) {
+    el.kanban.addEventListener("click", function (e) {
+      var card = e.target.closest(".task-card[data-thread-id]");
+      if (!card) return;
+      setFocusThread(card.getAttribute("data-thread-id"), true);
+    });
+  }
 
   el.modalClose.addEventListener("click", closeModal);
   el.backdrop.addEventListener("click", function (e) {
@@ -1638,15 +3167,410 @@
     }
   });
 
+  /* ---------- stats + filters + views ---------- */
+  function renderStats(agents, now) {
+    if (!el.statsStrip) return;
+    var active = agents.filter(function (a) { return !a.departed; });
+    var live = active.filter(function (a) { return classifyAgent(a, now) === "live"; });
+    var grok = active.filter(isGrokAgent);
+    var claude = active.filter(function (a) { return !isGrokAgent(a); });
+    var panes = agents.filter(hasLivePane);
+    var openTasks = (state.threads || []).filter(function (t) {
+      return String(t.kind || "").toLowerCase() === "task" &&
+        ["open", "claimed", "needs_info", "blocked"].indexOf(String(t.status || "").toLowerCase()) >= 0;
+    });
+    el.statsStrip.innerHTML =
+      '<div class="stat-pill live"><div class="n">' + live.length + '</div><div class="l">Live</div></div>' +
+      '<div class="stat-pill"><div class="n">' + active.length + '</div><div class="l">Active agents</div></div>' +
+      '<div class="stat-pill accent"><div class="n">' + grok.length + '</div><div class="l">Grok</div></div>' +
+      '<div class="stat-pill"><div class="n">' + claude.length + '</div><div class="l">Claude</div></div>' +
+      '<div class="stat-pill live"><div class="n">' + panes.length + '</div><div class="l">Live panes</div></div>' +
+      '<div class="stat-pill"><div class="n">' + openTasks.length + '</div><div class="l">Open tasks</div></div>';
+  }
+
+  function agentMatchesFilter(a, now) {
+    if (a.departed && state.fleetFilter !== "all") {
+      // departed only in "all" via collapsed section
+    }
+    var f = state.fleetFilter;
+    if (f === "live" && classifyAgent(a, now) !== "live") return false;
+    if (f === "grok" && !isGrokAgent(a)) return false;
+    if (f === "claude" && isGrokAgent(a)) return false;
+    if (f === "hub" && a.machine !== "hub") return false;
+    if (f === "spoke" && a.machine !== "spoke") return false;
+    var q = (state.agentQuery || "").trim().toLowerCase();
+    if (q) {
+      var hay = (a.alias + " " + (a.role || "") + " " + (a.model_type || "") + " " + (a.machine || "")).toLowerCase();
+      if (hay.indexOf(q) < 0) return false;
+    }
+    return true;
+  }
+
+  function setView(name) {
+    state.view = name;
+    ["fleet", "collab", "terminals"].forEach(function (v) {
+      var panel = document.getElementById("view-" + v);
+      var tab = document.getElementById("tab-" + v);
+      if (panel) {
+        if (v === name) {
+          panel.classList.add("active");
+          panel.hidden = false;
+        } else {
+          panel.classList.remove("active");
+          panel.hidden = true;
+        }
+      }
+      if (tab) {
+        tab.classList.toggle("active", v === name);
+        tab.setAttribute("aria-selected", v === name ? "true" : "false");
+      }
+    });
+    if (name === "collab") renderCollaboration();
+    if (name === "terminals") {
+      // mirror wall into full panel
+      if (el.terminalWallFull && el.terminalWall) {
+        el.terminalWallFull.innerHTML = el.terminalWall.innerHTML;
+      }
+    }
+  }
+
+  document.querySelectorAll(".view-tabs button").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      setView(btn.getAttribute("data-view"));
+    });
+  });
+
+  document.querySelectorAll("#fleet-filters .chip").forEach(function (chip) {
+    chip.addEventListener("click", function () {
+      state.fleetFilter = chip.getAttribute("data-filter") || "all";
+      document.querySelectorAll("#fleet-filters .chip").forEach(function (c) {
+        c.classList.toggle("active", c === chip);
+      });
+      renderAll();
+    });
+  });
+
+  var searchEl = document.getElementById("agent-search");
+  if (searchEl) {
+    searchEl.addEventListener("input", function () {
+      state.agentQuery = searchEl.value || "";
+      renderAll();
+    });
+  }
+
+  function setFocusAlias(alias, switchToCollab) {
+    state.focusAlias = alias || null;
+    if (switchToCollab) setView("collab");
+    renderCollaboration();
+    // mark selected cards
+    document.querySelectorAll(".agent-card, .term-window").forEach(function (n) {
+      n.classList.toggle("selected", n.getAttribute("data-alias") === state.focusAlias);
+    });
+  }
+
+  function setFocusThread(tid, switchToCollab) {
+    state.focusThreadId = tid == null || tid === "" ? null : Number(tid);
+    if (switchToCollab) setView("collab");
+    renderCollaboration();
+    document.querySelectorAll(".task-card").forEach(function (n) {
+      var id = n.getAttribute("data-thread-id");
+      n.classList.toggle(
+        "selected",
+        state.focusThreadId != null && String(state.focusThreadId) === String(id)
+      );
+    });
+  }
+
+  var clearFocusBtn = document.getElementById("seq-clear-focus");
+  if (clearFocusBtn) {
+    clearFocusBtn.addEventListener("click", function () {
+      state.focusAlias = null;
+      state.focusThreadId = null;
+      renderCollaboration();
+    });
+  }
+  var jumpLatest = document.getElementById("seq-scroll-latest");
+  if (jumpLatest) {
+    jumpLatest.addEventListener("click", function () {
+      var wrap = document.querySelector(".seq-wrap");
+      if (wrap) wrap.scrollTop = wrap.scrollHeight;
+    });
+  }
+  var threadAll = document.getElementById("thread-all");
+  if (threadAll) {
+    threadAll.addEventListener("click", function () {
+      setFocusThread(null, false);
+    });
+  }
+
+  /* ---------- collaboration sequence diagram ---------- */
+  function agentModelClass(alias) {
+    var a = findAgent(alias);
+    if (!a) return "";
+    return isGrokAgent(a) ? "grok" : "claude";
+  }
+
+  function filteredCollabMessages() {
+    var collab = state.collaboration || { messages: [] };
+    var msgs = collab.messages || [];
+    return msgs.filter(function (m) {
+      if (state.focusThreadId != null && Number(m.thread_id) !== Number(state.focusThreadId)) {
+        // keep non-thread events only when not focusing a thread? hide them when focused
+        if (m.thread_id) return false;
+        return false;
+      }
+      if (state.focusAlias) {
+        var fa = state.focusAlias;
+        if (m.from !== fa && m.to !== fa) return false;
+      }
+      return true;
+    });
+  }
+
+  function collabLifelines(msgs) {
+    var collab = state.collaboration || {};
+    var preferred = (collab.lifelines || []).filter(function (alias) {
+      var a = findAgent(alias);
+      return a && !a.departed;
+    });
+    // If focused, put focus first and include peers that talk to them
+    if (state.focusAlias) {
+      var peers = {};
+      peers[state.focusAlias] = true;
+      msgs.forEach(function (m) {
+        if (m.from === state.focusAlias && m.to) peers[m.to] = true;
+        if (m.to === state.focusAlias && m.from) peers[m.from] = true;
+      });
+      preferred = Object.keys(peers);
+    }
+    // Ensure everyone in msgs appears
+    var seen = {};
+    var out = [];
+    preferred.forEach(function (a) {
+      if (!seen[a] && a && a !== "?" && a.indexOf("role:") !== 0 && a !== "*broadcast*") {
+        seen[a] = true;
+        out.push(a);
+      }
+    });
+    msgs.forEach(function (m) {
+      [m.from, m.to].forEach(function (a) {
+        if (!a || seen[a] || a === "?" || a.indexOf("role:") === 0 || a === "*broadcast*") return;
+        seen[a] = true;
+        out.push(a);
+      });
+    });
+    // Cap columns for readability
+    if (out.length > 10) out = out.slice(0, 10);
+    return out;
+  }
+
+  function renderCollaboration() {
+    if (!el.seqCanvas) return;
+    var now = Date.now();
+    var msgs = filteredCollabMessages();
+    var lines = collabLifelines(msgs);
+
+    // Side lists
+    if (el.threadList) {
+      var tasks = (state.threads || [])
+        .filter(function (t) { return String(t.kind || "").toLowerCase() === "task" || t.kind === "message"; })
+        .slice(0, 40);
+      el.threadList.innerHTML = tasks.map(function (t) {
+        var active = state.focusThreadId != null && Number(state.focusThreadId) === Number(t.id);
+        return (
+          '<button type="button" class="collab-thread' + (active ? " active" : "") + '" data-thread="' +
+          escapeHtml(String(t.id)) + '">' +
+          escapeHtml(t.subject || ("#" + t.id)) +
+          '<span class="t-sub">' +
+          escapeHtml((t.from_agent || "?") + " → " + (t.to_target || "?")) +
+          " · " + escapeHtml(t.status || t.kind || "") +
+          " · " + escapeHtml(relTime(t.updated_at, now)) +
+          "</span></button>"
+        );
+      }).join("") || '<div class="empty-state" style="padding:8px">No threads yet.</div>';
+      el.threadList.querySelectorAll(".collab-thread").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          setFocusThread(btn.getAttribute("data-thread"), false);
+        });
+      });
+    }
+    if (threadAll) {
+      threadAll.classList.toggle("active", state.focusThreadId == null);
+    }
+    if (el.focusAgentList) {
+      var agents = (state.agents || []).filter(function (a) { return !a.departed; });
+      el.focusAgentList.innerHTML =
+        '<button type="button" class="collab-thread' + (!state.focusAlias ? " active" : "") + '" data-alias="">All agents</button>' +
+        agents.map(function (a) {
+          var active = state.focusAlias === a.alias;
+          return (
+            '<button type="button" class="collab-thread' + (active ? " active" : "") + '" data-alias="' +
+            escapeHtml(a.alias) + '">' +
+            escapeHtml(a.alias) +
+            '<span class="t-sub">' + escapeHtml((a.model_type || "") + " · " + (a.machine || "?")) + "</span></button>"
+          );
+        }).join("");
+      el.focusAgentList.querySelectorAll(".collab-thread").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var al = btn.getAttribute("data-alias");
+          setFocusAlias(al || null, false);
+        });
+      });
+    }
+
+    if (el.seqFocusLabel) {
+      var bits = [];
+      if (state.focusAlias) bits.push("agent " + state.focusAlias);
+      if (state.focusThreadId != null) bits.push("thread #" + state.focusThreadId);
+      el.seqFocusLabel.textContent = bits.length
+        ? "Focus: " + bits.join(" · ") + " · " + msgs.length + " arrows"
+        : "Showing all collaboration · " + msgs.length + " arrows";
+    }
+
+    if (!lines.length || !msgs.length) {
+      el.seqCanvas.innerHTML =
+        '<div class="seq-empty">No collaboration traffic yet for this focus.<br/>' +
+        "Send a task or message on the muster bus and it will appear here live.</div>";
+      return;
+    }
+
+    var colW = Math.max(120, Math.min(180, Math.floor(900 / lines.length)));
+    var n = lines.length;
+    var gridCols = "repeat(" + n + ", " + colW + "px)";
+
+    var heads =
+      '<div class="seq-heads" style="grid-template-columns:' + gridCols + '">' +
+      lines.map(function (alias) {
+        var focused = state.focusAlias === alias ? " focused" : "";
+        return (
+          '<div class="seq-head ' + agentModelClass(alias) + focused + '" data-alias="' +
+          escapeHtml(alias) + '" title="Focus ' + escapeHtml(alias) + '">' +
+          escapeHtml(alias) +
+          "</div>"
+        );
+      }).join("") +
+      "</div>";
+
+    var rows = msgs.map(function (m) {
+      var fromIdx = lines.indexOf(m.from);
+      var toIdx = lines.indexOf(m.to);
+      // broadcast / role / unknown: still draw from sender mid-span
+      var selfMsg = false;
+      if (fromIdx < 0) fromIdx = 0;
+      if (toIdx < 0) {
+        toIdx = fromIdx;
+        selfMsg = true;
+      }
+      var left = Math.min(fromIdx, toIdx);
+      var right = Math.max(fromIdx, toIdx);
+      var span = Math.max(1, right - left + 1);
+      var forward = fromIdx <= toIdx;
+      var kind = (m.kind || "event").toLowerCase();
+      var stroke = "#6b9aff";
+      if (kind === "task") stroke = "#7c5cbf";
+      else if (kind === "message" || kind === "send") stroke = "#2f6fed";
+      else if (kind === "reply") stroke = "#1a9d5c";
+      else if (kind === "transition" || kind === "claim") stroke = "#c9891a";
+      else if (kind.indexOf("register") >= 0) stroke = "#3dce84";
+
+      var label =
+        (m.subject || m.body || m.kind || "").trim() ||
+        (m.status_change ? "→ " + m.status_change : m.kind);
+      if (label.length > 48) label = label.slice(0, 46) + "…";
+
+      var hi = false;
+      if (state.focusAlias && (m.from === state.focusAlias || m.to === state.focusAlias)) hi = true;
+      if (state.focusThreadId != null && Number(m.thread_id) === Number(state.focusThreadId)) hi = true;
+
+      // SVG arrow spanning columns
+      var w = span * colW - 20;
+      var y = 16;
+      var mid = "m" + String(m.id).replace(/[^a-zA-Z0-9_-]/g, "");
+      var x1 = forward ? 8 : w - 8;
+      var x2 = forward ? w - 8 : 8;
+      if (selfMsg || fromIdx === toIdx) {
+        x1 = w * 0.25;
+        x2 = w * 0.75;
+      }
+
+      var arrowHtml =
+        '<div class="seq-arrow" style="grid-column:' + (left + 1) + " / span " + span + '">' +
+        '<svg viewBox="0 0 ' + w + ' 28" preserveAspectRatio="none">' +
+        "<defs>" +
+        '<marker id="af-' + mid + '" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">' +
+        '<path d="M0,0 L6,3 L0,6 Z" fill="' + stroke + '"/></marker>' +
+        "</defs>" +
+        '<line x1="' + x1 + '" y1="' + y + '" x2="' + x2 + '" y2="' + y +
+        '" stroke="' + stroke + '" stroke-width="2" marker-end="url(#af-' + mid + ')"/>' +
+        "</svg>" +
+        '<span class="seq-label" title="' + escapeHtml(m.subject || m.body || "") + '">' +
+        escapeHtml(label) +
+        "</span></div>";
+
+      return (
+        '<div class="seq-row' + (hi ? " hi" : "") + '" style="grid-template-columns:' + gridCols +
+        ";--col-w:" + colW + 'px" data-thread="' + escapeHtml(String(m.thread_id || "")) +
+        '" data-from="' + escapeHtml(m.from) + '" data-to="' + escapeHtml(m.to) + '">' +
+        '<div class="seq-meta" style="grid-column:1/-1">' +
+        "<span>" + escapeHtml(relTime(m.ts, now)) + "</span>" +
+        "<span>" + escapeHtml(m.from) + " → " + escapeHtml(m.to) + "</span>" +
+        "<span>" + escapeHtml(m.kind) + (m.status_change ? " · " + escapeHtml(m.status_change) : "") + "</span>" +
+        "</div>" +
+        arrowHtml +
+        "</div>"
+      );
+    }).join("");
+
+    el.seqCanvas.innerHTML = heads + rows;
+
+    el.seqCanvas.querySelectorAll(".seq-head").forEach(function (h) {
+      h.addEventListener("click", function () {
+        setFocusAlias(h.getAttribute("data-alias"), false);
+      });
+      h.addEventListener("dblclick", function () {
+        var a = findAgent(h.getAttribute("data-alias"));
+        if (a && hasLivePane(a)) openModal(a.alias);
+      });
+    });
+  }
+
   /* ---------- full render ---------- */
   function renderAll() {
     var now = Date.now();
-    renderAgents(state.agents, now);
+    renderStats(state.agents, now);
+    // Apply fleet filters by temporarily wrapping renderAgents data
+    var filtered = (state.agents || []).filter(function (a) {
+      if (a.departed) return true; // departed group still built inside renderAgents
+      return agentMatchesFilter(a, now);
+    });
+    // When filtering, also hide departed that don't match
+    if (state.fleetFilter !== "all" || state.agentQuery) {
+      filtered = (state.agents || []).filter(function (a) {
+        return agentMatchesFilter(a, now);
+      });
+    }
+    renderTerminalWall(state.agents);
+    if (el.terminalWallFull && state.view === "terminals") {
+      el.terminalWallFull.innerHTML = el.terminalWall ? el.terminalWall.innerHTML : "";
+    }
+    renderAgents(filtered.length ? filtered : state.agents, now);
+    // mark focus selection
+    document.querySelectorAll(".agent-card, .term-window").forEach(function (n) {
+      n.classList.toggle("selected", state.focusAlias && n.getAttribute("data-alias") === state.focusAlias);
+    });
     renderKanban(state.threads, now);
     renderFeed(state.events, now);
-    if (state.selectedAlias) {
+    if (state.view === "collab") renderCollaboration();
+    if (state.selectedAlias && state.termMode) {
+      // Don't fully re-render immersive terminal on every 3s status poll —
+      // that would thrash scroll position and wipe toolbar state. Pane
+      // content is driven by the 1s /api/pane poll instead. Only rebuild
+      // if the agent disappeared.
       var a = findAgent(state.selectedAlias);
-      if (a) renderModal(a);
+      if (!a) closeModal();
+    } else if (state.selectedAlias) {
+      var a2 = findAgent(state.selectedAlias);
+      if (a2) renderModal(a2);
       else closeModal();
     }
   }
@@ -1671,14 +3595,19 @@
     state.agents = data.agents || [];
     state.threads = data.threads || [];
     state.events = data.events || data.recent_events || [];
+    state.entries = data.entries || [];
+    state.collaboration = data.collaboration || { lifelines: [], messages: [] };
     renderAll();
     el.lastUpdated.textContent =
       "updated " + new Date().toLocaleTimeString();
+    var liveN = state.agents.filter(function (a) {
+      return !a.departed && a.live;
+    }).length;
     setPollOk(
-      state.agents.length +
-        " agent" +
-        (state.agents.length === 1 ? "" : "s") +
-        " · poll 3s"
+      liveN +
+        " live · " +
+        state.agents.filter(function (a) { return !a.departed; }).length +
+        " active · poll 3s"
     );
   }
 
@@ -1701,6 +3630,878 @@
       );
     }
   }
+
+  /* ---------- Computer voice panel: tool executor + mic pipeline ---------- */
+  var voice = {
+    // Continuous open mic + energy VAD + barge-in
+    continuous: false,
+    greeted: false,
+    stream: null,
+    audioCtx: null,
+    analyser: null,
+    vadRaf: null,
+    mediaRecorder: null,
+    chunks: [],
+    utteranceActive: false,
+    processing: false,
+    speaking: false,
+    currentAudio: null,
+    speechFrames: 0,
+    silenceStartTs: 0,
+    lastRms: 0,
+    speechThreshold: 0.018,
+    silenceThreshold: 0.012,
+    speechStartFrames: 5,
+    silenceEndMs: 750,
+    minUtteranceMs: 320,
+    utteranceStartTs: 0,
+    aliases: null,
+    displayNames: null,
+    // tri-state: null = untried, true = works, false = 404/error, use fallback chain
+    pipelineOk: null
+  };
+
+  // Human callsigns + speech map. Server /api/voice/aliases overrides at runtime.
+  var DEFAULT_VOICE_ALIASES = {
+    "chad": "hub-tui-claude",
+    "claude": "hub-tui-claude",
+    "number one": "hub-tui-claude",
+    "court": "ClaudeMacBookPro1",
+    "chris": "grok-spoke-a",
+    "alex": "grok-spoke-b",
+    "scout": "grok-hub-a",
+    "rio": "grok-hub-b",
+    "nova": "grok-hub-c",
+    "morgan": "grok-mbp-worker",
+    "sam": "MacStudioGrok1",
+    "grok": "grok-spoke-a",
+    "spoke a": "grok-spoke-a",
+    "spoke b": "grok-spoke-b",
+    "grok hub a": "grok-hub-a",
+    "grok hub b": "grok-hub-b",
+    "grok hub c": "grok-hub-c",
+    "mac studio grok": "MacStudioGrok1"
+  };
+  var DEFAULT_DISPLAY_NAMES = {
+    "hub-tui-claude": "Chad",
+    "ClaudeMacBookPro1": "Court",
+    "grok-spoke-a": "Chris",
+    "grok-spoke-b": "Alex",
+    "grok-hub-a": "Scout",
+    "grok-hub-b": "Rio",
+    "grok-hub-c": "Nova",
+    "grok-mbp-worker": "Morgan",
+    "MacStudioGrok1": "Sam",
+    "chad-mac": "Operator"
+  };
+
+  function loadVoiceAliases() {
+    fetch("/api/voice/aliases", { cache: "no-store" })
+      .then(function (r) {
+        if (!r.ok) throw new Error("no aliases endpoint");
+        return r.json();
+      })
+      .then(function (data) {
+        voice.aliases = (data && data.aliases) ? data.aliases : data;
+        voice.displayNames = (data && data.display_names) ? data.display_names : DEFAULT_DISPLAY_NAMES;
+      })
+      .catch(function () {
+        voice.aliases = DEFAULT_VOICE_ALIASES;
+        voice.displayNames = DEFAULT_DISPLAY_NAMES;
+      });
+  }
+
+  function displayName(alias) {
+    if (!alias) return "?";
+    var map = voice.displayNames || DEFAULT_DISPLAY_NAMES;
+    return map[alias] || alias;
+  }
+
+  function resolveAlias(name) {
+    if (!name) return null;
+    var raw = String(name).trim();
+    var known = (state.agents || []).map(function (a) { return a.alias; });
+    if (known.indexOf(raw) !== -1) return raw;
+    var key = raw.toLowerCase().replace(/[\-_]+/g, " ").replace(/\s+/g, " ").trim();
+    for (var i = 0; i < known.length; i++) {
+      if (known[i].toLowerCase() === key || known[i].toLowerCase().replace(/-/g, " ") === key) {
+        return known[i];
+      }
+    }
+    // human display reverse: "Chad" → hub-tui-claude
+    var dmap = voice.displayNames || DEFAULT_DISPLAY_NAMES;
+    var dkeys = Object.keys(dmap);
+    for (var di = 0; di < dkeys.length; di++) {
+      if (String(dmap[dkeys[di]]).toLowerCase() === key) return dkeys[di];
+    }
+    var map = voice.aliases || DEFAULT_VOICE_ALIASES;
+    if (map[key]) return map[key];
+    // longest partial spoken match
+    var best = null, bestLen = 0;
+    Object.keys(map).forEach(function (spoken) {
+      if (key.indexOf(spoken) !== -1 || spoken.indexOf(key) !== -1) {
+        if (spoken.length > bestLen) {
+          best = map[spoken];
+          bestLen = spoken.length;
+        }
+      }
+    });
+    if (best) return best;
+    if (key === "grok" || key === "the grok" || key === "a grok") {
+      return map["chris"] || map["spoke a"] || "grok-spoke-a";
+    }
+    if (key === "claude" || key === "the claude") {
+      return map["chad"] || map["claude"] || "hub-tui-claude";
+    }
+    return raw;
+  }
+
+  function setComputerPhrase(text) {
+    var ph = document.getElementById("computer-phrase");
+    if (ph) ph.textContent = text;
+  }
+
+  function appendComputerTranscript(text, kind) {
+    var box = document.getElementById("computer-transcript");
+    if (!box) return;
+    var line = document.createElement("div");
+    line.className = "computer-line" + (kind ? " " + kind : "");
+    var stamp = new Date().toLocaleTimeString();
+    line.textContent = "[" + stamp + "] " + text;
+    box.appendChild(line);
+    box.scrollTop = box.scrollHeight;
+    // Mirror to browser console for DevTools debugging
+    try {
+      console.log("[Computer]", kind || "log", text);
+    } catch (e) { /* ignore */ }
+  }
+
+  function logHeardPhrase(text, meta) {
+    var t = (text || "").trim();
+    if (!t) {
+      appendComputerTranscript("YOU SAID: (empty / silence — not sent to tools)", "you");
+      return;
+    }
+    appendComputerTranscript("YOU SAID: “" + t + "”", "you");
+    if (meta) appendComputerTranscript(meta, "sys");
+  }
+
+  function logToolCalls(calls) {
+    if (!calls || !calls.length) {
+      appendComputerTranscript("TOOLS: (none matched — try a phrase from the list below)", "tools");
+      return;
+    }
+    calls.forEach(function (c, i) {
+      var name = c.name || c.tool || "?";
+      var args = c.arguments || c.args || {};
+      appendComputerTranscript(
+        "TOOL " + (i + 1) + ": " + name + " " + JSON.stringify(args),
+        "tools"
+      );
+    });
+  }
+
+  function flashComputerTarget(sel) {
+    var n = typeof sel === "string" ? document.querySelector(sel) : sel;
+    if (!n) return;
+    n.classList.add("computer-flash");
+    setTimeout(function () { n.classList.remove("computer-flash"); }, 900);
+  }
+
+  function computerReportStatus() {
+    var now = Date.now();
+    var agents = state.agents || [];
+    var active = agents.filter(function (a) { return !a.departed; });
+    var live = active.filter(function (a) { return classifyAgent(a, now) === "live"; });
+    var panes = agents.filter(hasLivePane);
+    var openTasks = (state.threads || []).filter(function (t) {
+      return String(t.kind || "").toLowerCase() === "task" &&
+        ["open", "claimed", "needs_info", "blocked"].indexOf(String(t.status || "").toLowerCase()) >= 0;
+    });
+    return live.length + " live, " + active.length + " active agents, " +
+      panes.length + " live panes, " + openTasks.length + " open tasks.";
+  }
+
+  function computerListFleet() {
+    var now = Date.now();
+    var agents = (state.agents || []).filter(function (a) { return !a.departed; });
+    if (!agents.length) return "No active agents.";
+    return agents.map(function (a) {
+      var human = displayName(a.alias);
+      var label = human !== a.alias ? human + " [" + a.alias + "]" : a.alias;
+      return label + " (" + classifyAgent(a, now) + (hasLivePane(a) ? ", live pane" : "") + ")";
+    }).join(", ");
+  }
+
+  function findThreadByArg(arg) {
+    if (arg == null || arg === "") return null;
+    var threads = state.threads || [];
+    if (/^\d+$/.test(String(arg))) {
+      var byId = threads.filter(function (t) { return Number(t.id) === Number(arg); })[0];
+      if (byId) return byId;
+    }
+    var q = String(arg).toLowerCase();
+    return threads.filter(function (t) {
+      return String(t.subject || "").toLowerCase().indexOf(q) !== -1;
+    })[0] || null;
+  }
+
+  // Maps voice tool_calls (from POST /api/voice/command or /pipeline) onto the
+  // dashboard's existing JS actions. Tool call shape assumed as
+  // {tool|name: "open_view", args|arguments: {...}} per FLEET_PLAN.md's UI
+  // tools table; both key spellings are accepted since the exact brain.py
+  // output shape (VOICE-4, not yet built) wasn't pinned down at write time.
+  function executeToolCall(call) {
+    var name = call && (call.tool || call.name || call.type);
+    var args = (call && (call.args || call.arguments)) || {};
+    switch (name) {
+      case "open_view":
+        setView(args.view || args.name || "fleet");
+        flashComputerTarget("#view-" + (args.view || args.name || "fleet"));
+        return true;
+      case "open_terminal": {
+        var oAlias = resolveAlias(args.agent || args.name || args.alias || args.target);
+        if (oAlias && findAgent(oAlias)) {
+          // Headless workers (hub Grok loops) have no pane — still focus them
+          // in collab; open terminal only when a live pane exists.
+          if (hasLivePane(findAgent(oAlias))) {
+            openModal(oAlias);
+          } else {
+            setFocusAlias(oAlias, true);
+            appendComputerTranscript(
+              (oAlias) + " is headless — no live terminal pane. Focusing collaboration."
+            );
+          }
+          return true;
+        }
+        appendComputerTranscript("Unknown agent: " + (args.agent || args.name || args.alias || args.target || "?"));
+        return false;
+      }
+      case "focus_agent": {
+        var fAlias = resolveAlias(args.agent || args.name || args.alias || args.target);
+        if (fAlias) { setFocusAlias(fAlias, true); flashComputerTarget('.agent-card[data-alias="' + fAlias + '"]'); }
+        return !!fAlias;
+      }
+      case "focus_thread": {
+        var t = findThreadByArg(args.thread_id != null ? args.thread_id : (args.subject || args.name));
+        if (t) { setFocusThread(t.id, true); flashComputerTarget('.task-card[data-thread-id="' + t.id + '"]'); }
+        return !!t;
+      }
+      case "set_filter": {
+        var f = args.filter || args.name || "all";
+        state.fleetFilter = f;
+        document.querySelectorAll("#fleet-filters .chip").forEach(function (c) {
+          c.classList.toggle("active", c.getAttribute("data-filter") === f);
+        });
+        setView("fleet");
+        renderAll();
+        return true;
+      }
+      case "clear_focus":
+        state.focusAlias = null;
+        state.focusThreadId = null;
+        renderCollaboration();
+        return true;
+      case "list_fleet":
+        appendComputerTranscript("Fleet: " + computerListFleet());
+        return true;
+      case "report_status":
+        appendComputerTranscript("Status: " + computerReportStatus());
+        return true;
+      case "on_screen": {
+        setComputerPhrase("ON SCREEN");
+        if (args.view) {
+          setView(args.view);
+          flashComputerTarget("#view-" + args.view);
+        } else if (args.agent || args.alias || args.name || args.target) {
+          var sAlias = resolveAlias(args.agent || args.alias || args.name || args.target);
+          if (sAlias) { setFocusAlias(sAlias, true); flashComputerTarget('.agent-card[data-alias="' + sAlias + '"]'); }
+        } else if (args.thread_id != null || args.subject) {
+          var st = findThreadByArg(args.thread_id != null ? args.thread_id : args.subject);
+          if (st) { setFocusThread(st.id, true); flashComputerTarget('.task-card[data-thread-id="' + st.id + '"]'); }
+        }
+        var panel = document.getElementById("computer-panel");
+        if (panel) {
+          panel.classList.remove("computer-flash");
+          void panel.offsetWidth;
+          panel.classList.add("computer-flash");
+        }
+        return true;
+      }
+      default:
+        return false;
+    }
+  }
+
+  function executeToolCalls(calls) {
+    logToolCalls(calls);
+    (calls || []).forEach(function (call) {
+      var ok = false;
+      try {
+        ok = executeToolCall(call);
+      } catch (e) {
+        appendComputerTranscript(
+          "TOOL ERROR: " + (e && e.message ? e.message : String(e)),
+          "sys"
+        );
+        return;
+      }
+      var name = call && (call.name || call.tool) || "?";
+      appendComputerTranscript(
+        ok ? "INVOKED ✓ " + name : "FAILED ✗ " + name + " (unknown or missing target)",
+        "tools"
+      );
+    });
+  }
+
+  function setMicUi(mode) {
+    // mode: off | listen | hearing | speaking | working
+    var micBtn = document.getElementById("computer-mic");
+    var hint = document.getElementById("computer-hint");
+    if (!micBtn) return;
+    micBtn.classList.remove("active", "hearing", "speaking");
+    micBtn.setAttribute("aria-pressed", voice.continuous ? "true" : "false");
+    if (mode === "listen") {
+      micBtn.classList.add("active");
+      setComputerPhrase("LISTENING…");
+      if (hint) hint.textContent = "continuous · speak freely · interrupt anytime";
+    } else if (mode === "hearing") {
+      micBtn.classList.add("hearing");
+      setComputerPhrase("HEARING YOU…");
+      if (hint) hint.textContent = "capturing utterance…";
+    } else if (mode === "speaking") {
+      micBtn.classList.add("speaking");
+      setComputerPhrase("SPEAKING…");
+      if (hint) hint.textContent = "talk over me to interrupt";
+    } else if (mode === "working") {
+      micBtn.classList.add("active");
+      setComputerPhrase("WORKING…");
+      if (hint) hint.textContent = "processing · still listening for interrupt";
+    } else {
+      setComputerPhrase("STANDING BY");
+      if (hint) hint.textContent = "tap mic · continuous listen + VAD interrupt";
+    }
+  }
+
+  function updateVadMeter(rms) {
+    var fill = document.getElementById("computer-vad-fill");
+    if (!fill) return;
+    var pct = Math.min(100, Math.round((rms / 0.12) * 100));
+    fill.style.width = pct + "%";
+  }
+
+  function stopComputerAudio() {
+    if (voice.currentAudio) {
+      try {
+        voice.currentAudio.pause();
+        voice.currentAudio.currentTime = 0;
+      } catch (e) { /* ignore */ }
+      voice.currentAudio = null;
+    }
+    voice.speaking = false;
+  }
+
+  function playVoiceWavBase64(b64) {
+    if (!b64) return Promise.resolve();
+    return playVoiceWavUrl("data:audio/wav;base64," + b64);
+  }
+
+  function playVoiceWavBlob(blob) {
+    if (!blob) return Promise.resolve();
+    var url = URL.createObjectURL(blob);
+    return playVoiceWavUrl(url).then(function () {
+      try { URL.revokeObjectURL(url); } catch (e) { /* ignore */ }
+    });
+  }
+
+  function playVoiceWavUrl(url) {
+    return new Promise(function (resolve) {
+      stopComputerAudio();
+      var audio = new Audio(url);
+      voice.currentAudio = audio;
+      voice.speaking = true;
+      setMicUi(voice.continuous ? "speaking" : "speaking");
+      var done = function () {
+        if (voice.currentAudio === audio) {
+          voice.currentAudio = null;
+          voice.speaking = false;
+        }
+        if (voice.continuous) setMicUi(voice.processing ? "working" : "listen");
+        else setMicUi("off");
+        resolve();
+      };
+      audio.onended = done;
+      audio.onerror = done;
+      audio.play().catch(done);
+    });
+  }
+
+  function handlePipelineJson(data) {
+    voice.processing = false;
+    var t = (data.transcript || "").trim();
+    logHeardPhrase(t, data.error ? "stt/command note: " + data.error : null);
+    if (!t || t === "[no transcript]" || /^\[STT/i.test(t)) {
+      appendComputerTranscript(
+        "No usable transcript — speak louder/closer, or: __musterComputer.testCommand('Show Chad')",
+        "sys"
+      );
+      if (voice.continuous) setMicUi("listen");
+      else setMicUi("off");
+      return;
+    }
+    if (data.refused) {
+      appendComputerTranscript("REFUSED (" + (data.refusal_reason || "no") + ")", "sys");
+      logToolCalls([]);
+    } else if (data.tool_calls && data.tool_calls.length) {
+      executeToolCalls(data.tool_calls);
+    } else {
+      logToolCalls([]);
+    }
+    if (data.speech) {
+      appendComputerTranscript("COMPUTER: " + data.speech, data.refused ? "sys" : undefined);
+    }
+    var speech = data.speech || (data.refused ? "Hell no." : "Acknowledged.");
+    var play = data.audio_wav_b64
+      ? playVoiceWavBase64(data.audio_wav_b64)
+      : data.audio_b64
+        ? playVoiceWavBase64(data.audio_b64)
+        : fetch("/api/voice/tts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: speech })
+          }).then(function (r) {
+            if (!r.ok) throw new Error("tts " + r.status);
+            return r.blob();
+          }).then(playVoiceWavBlob);
+    Promise.resolve(play).catch(function () {
+      if (voice.continuous) setMicUi("listen");
+      else setMicUi("off");
+    });
+  }
+
+  // Fallback chain over the three individually-documented endpoints, used
+  // when POST /api/voice/pipeline 404s or errors.
+  function runVoiceChainedFallback(blob) {
+    voice.processing = true;
+    setMicUi("working");
+    var fd = new FormData();
+    fd.append("audio", blob, "command.webm");
+    fetch("/api/voice/stt", { method: "POST", body: fd })
+      .then(function (r) { if (!r.ok) throw new Error("stt HTTP " + r.status); return r.json(); })
+      .then(function (sttData) {
+        var text = (sttData.text || "").trim();
+        logHeardPhrase(text);
+        if (!text || text === "[no transcript]" || /^\[STT/i.test(text)) {
+          voice.processing = false;
+          appendComputerTranscript(
+            "STT returned nothing useful. Check mic permissions + speak a full phrase.",
+            "sys"
+          );
+          if (voice.continuous) setMicUi("listen");
+          else setMicUi("off");
+          return null;
+        }
+        return fetch("/api/voice/command", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: text })
+        }).then(function (r) {
+          if (!r.ok) throw new Error("command HTTP " + r.status);
+          return r.json();
+        }).then(function (cmdData) {
+          if (cmdData.refused) {
+            appendComputerTranscript("REFUSED (" + (cmdData.refusal_reason || "no") + ")", "sys");
+            logToolCalls([]);
+          } else if (cmdData.tool_calls && cmdData.tool_calls.length) {
+            executeToolCalls(cmdData.tool_calls);
+          } else {
+            logToolCalls([]);
+          }
+          if (!cmdData.speech) {
+            voice.processing = false;
+            if (voice.continuous) setMicUi("listen");
+            return null;
+          }
+          appendComputerTranscript("COMPUTER: " + cmdData.speech, cmdData.refused ? "sys" : undefined);
+          return fetch("/api/voice/tts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: cmdData.speech })
+          })
+            .then(function (r) { if (!r.ok) throw new Error("tts HTTP " + r.status); return r.blob(); })
+            .then(function (b) {
+              voice.processing = false;
+              return playVoiceWavBlob(b);
+            });
+        });
+      })
+      .catch(function (err) {
+        voice.processing = false;
+        setComputerPhrase("ERROR");
+        appendComputerTranscript("Voice pipeline error: " + (err && err.message ? err.message : String(err)));
+        setTimeout(function () {
+          if (voice.continuous) setMicUi("listen");
+          else setMicUi("off");
+        }, 1200);
+      });
+  }
+
+  function runVoicePipeline(blob) {
+    if (!blob || blob.size < 800) {
+      // too small — noise click
+      if (voice.continuous) setMicUi("listen");
+      return;
+    }
+    voice.processing = true;
+    setMicUi("working");
+    if (voice.pipelineOk === false) {
+      runVoiceChainedFallback(blob);
+      return;
+    }
+    var fd = new FormData();
+    fd.append("audio", blob, "command.webm");
+    fetch("/api/voice/pipeline", { method: "POST", body: fd })
+      .then(function (r) {
+        if (!r.ok) throw new Error("pipeline HTTP " + r.status);
+        var ct = r.headers.get("content-type") || "";
+        if (ct.indexOf("application/json") !== -1) {
+          return r.json().then(function (data) { return { json: data }; });
+        }
+        return r.blob().then(function (b) { return { audioBlob: b }; });
+      })
+      .then(function (result) {
+        voice.pipelineOk = true;
+        if (result.json) {
+          handlePipelineJson(result.json);
+        } else if (result.audioBlob) {
+          voice.processing = false;
+          playVoiceWavBlob(result.audioBlob);
+        }
+      })
+      .catch(function (err) {
+        voice.pipelineOk = false;
+        appendComputerTranscript(
+          "/api/voice/pipeline unavailable (" + (err && err.message ? err.message : err) + "); using stt→command→tts."
+        );
+        runVoiceChainedFallback(blob);
+      });
+  }
+
+  /* ---------- Continuous mic + VAD ---------- */
+  function getRms() {
+    if (!voice.analyser) return 0;
+    var buf = new Float32Array(voice.analyser.fftSize);
+    voice.analyser.getFloatTimeDomainData(buf);
+    var sum = 0;
+    for (var i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+    return Math.sqrt(sum / buf.length);
+  }
+
+  function beginUtteranceCapture() {
+    if (voice.utteranceActive || !voice.stream) return;
+    // Barge-in: kill Computer speech immediately
+    if (voice.speaking) {
+      stopComputerAudio();
+      appendComputerTranscript("(interrupted)");
+    }
+    voice.chunks = [];
+    voice.utteranceStartTs = Date.now();
+    voice.silenceStartTs = 0;
+    var mime = "";
+    if (window.MediaRecorder && MediaRecorder.isTypeSupported) {
+      if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) mime = "audio/webm;codecs=opus";
+      else if (MediaRecorder.isTypeSupported("audio/webm")) mime = "audio/webm";
+    }
+    try {
+      voice.mediaRecorder = mime
+        ? new MediaRecorder(voice.stream, { mimeType: mime })
+        : new MediaRecorder(voice.stream);
+    } catch (e) {
+      appendComputerTranscript("MediaRecorder error: " + e.message);
+      return;
+    }
+    voice.mediaRecorder.ondataavailable = function (e) {
+      if (e.data && e.data.size) voice.chunks.push(e.data);
+    };
+    voice.mediaRecorder.onstop = function () {
+      var dur = Date.now() - voice.utteranceStartTs;
+      var blob = new Blob(voice.chunks, {
+        type: (voice.mediaRecorder && voice.mediaRecorder.mimeType) || "audio/webm"
+      });
+      voice.chunks = [];
+      voice.utteranceActive = false;
+      voice.mediaRecorder = null;
+      if (dur < voice.minUtteranceMs) {
+        if (voice.continuous) setMicUi("listen");
+        return;
+      }
+      runVoicePipeline(blob);
+    };
+    // timeslice keeps data flowing so barge-in capture is solid
+    voice.mediaRecorder.start(120);
+    voice.utteranceActive = true;
+    setMicUi("hearing");
+  }
+
+  function endUtteranceCapture() {
+    if (!voice.utteranceActive || !voice.mediaRecorder) return;
+    if (voice.mediaRecorder.state === "recording") {
+      try { voice.mediaRecorder.stop(); } catch (e) { /* ignore */ }
+    }
+  }
+
+  function vadLoop() {
+    if (!voice.continuous) return;
+    var rms = getRms();
+    voice.lastRms = rms;
+    updateVadMeter(rms);
+
+    var isSpeech = rms >= voice.speechThreshold;
+    var isSilent = rms < voice.silenceThreshold;
+
+    // Allow interrupt even while processing/speaking
+    if (isSpeech) {
+      voice.speechFrames++;
+      voice.silenceStartTs = 0;
+      if (!voice.utteranceActive && voice.speechFrames >= voice.speechStartFrames) {
+        beginUtteranceCapture();
+      }
+    } else {
+      voice.speechFrames = 0;
+      if (voice.utteranceActive) {
+        if (isSilent) {
+          if (!voice.silenceStartTs) voice.silenceStartTs = Date.now();
+          if (Date.now() - voice.silenceStartTs >= voice.silenceEndMs) {
+            endUtteranceCapture();
+          }
+        } else {
+          // mid-level noise: don't end yet
+          voice.silenceStartTs = 0;
+        }
+      }
+    }
+
+    voice.vadRaf = requestAnimationFrame(vadLoop);
+  }
+
+  function startContinuousListen() {
+    if (voice.continuous) return;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setComputerPhrase("NO MIC");
+      appendComputerTranscript("This browser/context has no microphone access (getUserMedia unavailable).");
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      }
+    }).then(function (stream) {
+      voice.stream = stream;
+      voice.continuous = true;
+      voice.speechFrames = 0;
+      voice.silenceStartTs = 0;
+      voice.utteranceActive = false;
+
+      var AC = window.AudioContext || window.webkitAudioContext;
+      voice.audioCtx = new AC();
+      if (voice.audioCtx.state === "suspended") {
+        voice.audioCtx.resume().catch(function () {});
+      }
+      var source = voice.audioCtx.createMediaStreamSource(stream);
+      voice.analyser = voice.audioCtx.createAnalyser();
+      voice.analyser.fftSize = 2048;
+      voice.analyser.smoothingTimeConstant = 0.35;
+      source.connect(voice.analyser);
+      // Do NOT connect to destination (would speaker-loop).
+
+      setMicUi("listen");
+      appendComputerTranscript("Mic open. Continuous listen + interrupt armed.", "sys");
+      voice.vadRaf = requestAnimationFrame(vadLoop);
+      // Sarcastic Captain Chad greeting (once per open)
+      if (!voice.greeted) {
+        voice.greeted = true;
+        fetch("/api/voice/greet", { cache: "no-store" })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (data) {
+            if (!data) return;
+            if (data.speech) {
+              appendComputerTranscript("COMPUTER: " + data.speech);
+              setComputerPhrase("GREETING…");
+            }
+            if (data.audio_wav_b64) {
+              return playVoiceWavBase64(data.audio_wav_b64);
+            }
+            if (data.speech) {
+              return fetch("/api/voice/tts", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text: data.speech })
+              }).then(function (r) { return r.ok ? r.blob() : null; })
+                .then(function (b) { if (b) return playVoiceWavBlob(b); });
+            }
+          })
+          .catch(function () {
+            appendComputerTranscript(
+              "COMPUTER: Captain Chad. I'll do the work. You do the… sitting.",
+              "sys"
+            );
+          });
+      }
+    }).catch(function (err) {
+      voice.continuous = false;
+      setComputerPhrase("MIC ERROR");
+      appendComputerTranscript("Microphone error: " + (err && err.message ? err.message : String(err)));
+    });
+  }
+
+  function stopContinuousListen() {
+    voice.continuous = false;
+    voice.greeted = false; // re-greet next open
+    if (voice.vadRaf) {
+      cancelAnimationFrame(voice.vadRaf);
+      voice.vadRaf = null;
+    }
+    if (voice.utteranceActive) {
+      try { endUtteranceCapture(); } catch (e) { /* ignore */ }
+    }
+    stopComputerAudio();
+    if (voice.mediaRecorder && voice.mediaRecorder.state === "recording") {
+      try { voice.mediaRecorder.stop(); } catch (e) { /* ignore */ }
+    }
+    voice.mediaRecorder = null;
+    voice.utteranceActive = false;
+    voice.processing = false;
+    if (voice.stream) {
+      voice.stream.getTracks().forEach(function (t) { t.stop(); });
+      voice.stream = null;
+    }
+    if (voice.audioCtx) {
+      try { voice.audioCtx.close(); } catch (e) { /* ignore */ }
+      voice.audioCtx = null;
+    }
+    voice.analyser = null;
+    updateVadMeter(0);
+    setMicUi("off");
+  }
+
+  function toggleContinuousListen() {
+    if (voice.continuous) stopContinuousListen();
+    else startContinuousListen();
+  }
+
+  loadVoiceAliases();
+
+  var computerToggleBtn = document.getElementById("computer-toggle");
+  var computerPanelEl = document.getElementById("computer-panel");
+  if (computerToggleBtn && computerPanelEl) {
+    computerToggleBtn.addEventListener("click", function () {
+      var opening = computerPanelEl.hidden;
+      computerPanelEl.hidden = !opening;
+      // Auto-start continuous listen when opening Computer
+      if (opening) {
+        startContinuousListen();
+      } else {
+        stopContinuousListen();
+      }
+    });
+  }
+  var computerCloseBtn = document.getElementById("computer-close");
+  if (computerCloseBtn && computerPanelEl) {
+    computerCloseBtn.addEventListener("click", function () {
+      computerPanelEl.hidden = true;
+      stopContinuousListen();
+    });
+  }
+
+  var computerMicBtn = document.getElementById("computer-mic");
+  if (computerMicBtn) {
+    // Tap toggles continuous listen (no more hold-to-talk)
+    computerMicBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      toggleContinuousListen();
+    });
+  }
+
+  // Safety: stop mic if tab hidden
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden && voice.continuous) {
+      // keep listening in background only if user wants? Safer to pause VAD raf
+      // but keep stream — actually pause continuous to avoid surprise capture
+      stopContinuousListen();
+      appendComputerTranscript("(listening paused — tab hidden)");
+    }
+  });
+
+  // Typed command path — bypasses STT so you can verify tools without speaking
+  function testCommand(text) {
+    appendComputerTranscript("TYPE TEST → " + text, "sys");
+    return fetch("/api/voice/command", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: text })
+    })
+      .then(function (r) { if (!r.ok) throw new Error("command HTTP " + r.status); return r.json(); })
+      .then(function (data) {
+        logHeardPhrase(data.transcript || text, "via typed test");
+        executeToolCalls(data.tool_calls || []);
+        if (data.speech) {
+          appendComputerTranscript("COMPUTER: " + data.speech);
+          return fetch("/api/voice/tts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: data.speech })
+          }).then(function (r) { return r.ok ? r.blob() : null; })
+            .then(function (b) { if (b) return playVoiceWavBlob(b); });
+        }
+      })
+      .catch(function (err) {
+        appendComputerTranscript("testCommand error: " + (err.message || err), "sys");
+      });
+  }
+
+  function showRecentVoiceLog() {
+    return fetch("/api/voice/log?n=15", { cache: "no-store" })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        appendComputerTranscript("LOG " + (data.path || ""), "sys");
+        (data.entries || []).forEach(function (e) {
+          appendComputerTranscript(
+            (e.stage || "?") + ": " + (e.transcript || e.text || "") +
+              " → tools=" + JSON.stringify(e.tool_calls || []),
+            "sys"
+          );
+        });
+        return data;
+      });
+  }
+
+  fetch("/api/voice/help", { cache: "no-store" })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (help) {
+      if (!help || !help.phrases) return;
+      var helpEl = document.getElementById("computer-help");
+      if (!helpEl) return;
+      helpEl.innerHTML =
+        "<strong>Try saying:</strong><br/>" +
+        help.phrases.slice(0, 8).map(function (p) {
+          return "<code>" + escapeHtml(p.say) + "</code>";
+        }).join("<br/>") +
+        "<br/><strong>Names:</strong> " + escapeHtml((help.names || []).join(", "));
+    })
+    .catch(function () {});
+
+  window.__musterComputer = {
+    executeToolCall: executeToolCall,
+    executeToolCalls: executeToolCalls,
+    resolveAlias: resolveAlias,
+    startContinuousListen: startContinuousListen,
+    stopContinuousListen: stopContinuousListen,
+    toggleContinuousListen: toggleContinuousListen,
+    testCommand: testCommand,
+    showRecentVoiceLog: showRecentVoiceLog
+  };
 
   /* ---------- demo / offline fixture (only when opened as file or ?demo=1) ---------- */
   function demoPayload() {
