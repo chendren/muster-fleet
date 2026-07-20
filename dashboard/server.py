@@ -87,6 +87,7 @@ ALIAS_MACHINE = {
     "claude-remot": "spoke",
     "grok-remote": "spoke",
     "grok-mbp": "spoke",
+    "grok-mbp-worker": "spoke",
     "macbookpro-test": "spoke",
 }
 
