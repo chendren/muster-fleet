@@ -24,6 +24,7 @@ around it.
 | Router | Route goals, track requests, memory/context | [`docs/ROUTER.md`](docs/ROUTER.md) |
 | Computer voice | Local Whisper + Ollama + Kokoro-ONNX (no macOS `say`) | [`docs/VOICE.md`](docs/VOICE.md) |
 | Epic / landed | Multi-machine platform enhancement plan + status | [`docs/EPIC-FLEET-ENHANCE.md`](docs/EPIC-FLEET-ENHANCE.md) |
+| **Live proof** | Two machines + multi-TUI end-to-end verification | [`docs/PROOF.md`](docs/PROOF.md) |
 | War stories | Bugs we hit so you don’t re-derive them | [`PITFALLS.md`](PITFALLS.md) |
 
 `muster` itself is **local-only** by design: one unix-socket daemon, one
@@ -88,6 +89,7 @@ muster-fleet/
     AGENTCORE.md            # local AgentCore emulator
     ROUTER.md               # request router + memory
     EPIC-FLEET-ENHANCE.md   # platform epic + landed checklist
+    PROOF.md                # live two-machine multi-TUI proof
   fleet/
     muster-spawn-tui.sh     # spawn Claude/Grok on hub|spoke
     fleet-restart-hub-workers.sh
@@ -194,6 +196,47 @@ Smoke test:
 ```bash
 fleet/acceptance/smoke.sh
 ```
+
+---
+
+## Proof: two machines + multiple TUI sessions
+
+**Verified live** under proof id `proof-20260719-233519` (2026-07-19 CDT).
+
+| Machine | Host | Live TUI sessions |
+|---------|------|-------------------|
+| **HUB** | `Chads-Mac-Studio.local` | `hub-tui-claude` (Claude Code) |
+| **SPOKE** | `Mac.lan` | `grok-spoke-a`, `grok-spoke-b` (Grok TUI) |
+
+Plus headless hub workers `grok-hub-a` / `grok-hub-b` on the same bus.
+
+| Bus task | Worker | Result | Stamp filesystem |
+|----------|--------|--------|------------------|
+| #64 | `grok-hub-a` | completed | **hub** `/tmp/fleet-cross-proof-hub-a.txt` |
+| #62 | `grok-hub-b` | completed | **hub** `/tmp/fleet-cross-proof-hub-b.txt` |
+| #66 | `hub-tui-claude` | completed | **hub** `/tmp/fleet-cross-proof-claude.txt` |
+| #63 | `grok-spoke-a` | completed | **spoke** `/tmp/fleet-cross-proof-spoke-a.txt` (`Mac.lan`) |
+| #65 | `grok-spoke-b` | completed | **spoke** `/tmp/fleet-cross-proof-spoke-b.txt` (`Mac.lan`) |
+
+**5/5 assigned tasks completed by the assignees** (not the producer). Cross-checks:
+
+- Spoke stamp files are **not** on the hub disk.
+- Hub stamp files are **not** on the spoke disk.
+- Spoke hostname files read `Mac.lan`; hub Claude reported `Chads-Mac-Studio.local`.
+
+Example stamps:
+
+```text
+# hub
+proof=proof-20260719-233519 machine=hub alias=hub-tui-claude ts=1784522158 ok
+
+# spoke (via ssh muster-remote)
+proof=proof-20260719-233519 machine=spoke alias=grok-spoke-a ts=1784522231 ok
+proof=proof-20260719-233519 machine=spoke alias=grok-spoke-b ts=1784522156 ok
+```
+
+Full write-up, bus thread ids, negative checks, and re-run steps:
+**[`docs/PROOF.md`](docs/PROOF.md)**.
 
 Prove drain (create tasks via muster MCP or CLI tooling) and expect stamp
 files under `/tmp/fleet-drain-*.txt` within one headless cycle or one nudge
