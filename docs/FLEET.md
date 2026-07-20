@@ -177,6 +177,9 @@ toggle), which hangs on the first MCP call.
 
 ## Smoke test: prove the fleet drains
 
+Recorded two-machine multi-TUI proof (tasks, stamps, hostnames):
+**[`docs/PROOF.md`](PROOF.md)** (`proof-20260719-233519`).
+
 ```bash
 # From any agent with muster MCP (example: producer MacStudioGrok1)
 # Create one task per worker, e.g.:
