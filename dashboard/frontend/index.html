@@ -542,6 +542,26 @@
       color: var(--text-faint);
     }
 
+    .departed-group {
+      margin-top: 14px;
+    }
+    .departed-group > summary {
+      cursor: pointer;
+      color: var(--text-faint);
+      font-size: 13px;
+      padding: 8px 4px;
+      user-select: none;
+    }
+    .departed-group > summary:hover {
+      color: var(--text-muted);
+    }
+    .departed-group[open] > summary {
+      margin-bottom: 8px;
+    }
+    .departed-group .agent-card {
+      opacity: 0.55;
+    }
+
     .error-banner {
       background: #fdecea;
       color: #8b1e16;
@@ -933,14 +953,7 @@
   }
 
   /* ---------- render agents ---------- */
-  function renderAgents(agents, now) {
-    if (!agents || !agents.length) {
-      el.agentGrid.innerHTML = '<div class="empty-state">No agents reported yet.</div>';
-      el.tokenBars.style.display = "none";
-      return;
-    }
-
-    var html = agents.map(function (a) {
+  function renderAgentCard(a, now) {
       var st = classifyAgent(a, now);
       var act = a.activity || {};
       var task = a.current_task;
@@ -1016,9 +1029,51 @@
         tokenNote +
         "</article>"
       );
-    }).join("");
+  }
 
-    el.agentGrid.innerHTML = html;
+  function renderAgents(agents, now) {
+    if (!agents || !agents.length) {
+      el.agentGrid.innerHTML = '<div class="empty-state">No agents reported yet.</div>';
+      el.tokenBars.style.display = "none";
+      return;
+    }
+
+    // Group: live/quiet agents get full-weight cards up top; departed
+    // (explicitly tombstoned, or nothing heard from in a long while) are
+    // real bus history — muster itself never deletes them, only tombstones
+    // — but showing every departed one-shot test run as an equal-weight
+    // card makes an otherwise-quiet fleet look like it has far more active
+    // workers than it does. Collapse them below, closed by default.
+    var active = [];
+    var departed = [];
+    agents.forEach(function (a) {
+      if (classifyAgent(a, now) === "departed") departed.push(a);
+      else active.push(a);
+    });
+
+    el.agentGrid.innerHTML = active.length
+      ? active.map(function (a) { return renderAgentCard(a, now); }).join("")
+      : '<div class="empty-state">No active agents right now.</div>';
+
+    var departedHtml = departed
+      .map(function (a) { return renderAgentCard(a, now); })
+      .join("");
+    var existingDetails = document.getElementById("departed-group");
+    var wasOpen = existingDetails ? existingDetails.open : false;
+    var departedBlock =
+      '<details id="departed-group" class="departed-group"' +
+      (wasOpen ? " open" : "") +
+      "><summary>" +
+      departed.length +
+      " departed / inactive (click to show)</summary>" +
+      '<div class="agent-grid">' +
+      departedHtml +
+      "</div></details>";
+    if (existingDetails) {
+      existingDetails.outerHTML = departed.length ? departedBlock : "";
+    } else if (departed.length && el.agentGrid.parentNode) {
+      el.agentGrid.insertAdjacentHTML("afterend", departedBlock);
+    }
 
     // Token comparison bars — only agents that actually have token data
     var withTok = agents.filter(hasTokens);
