@@ -459,6 +459,25 @@
       font-size: 0.82rem;
     }
 
+    /* FLIP enter: new cards fade+scale in (JS toggles these classes) */
+    .task-card.flip-enter {
+      opacity: 0;
+      transform: scale(0.92);
+    }
+
+    .task-card.flip-enter-active {
+      transition: opacity 280ms ease, transform 280ms ease;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .task-card.flip-enter,
+      .task-card.flip-enter-active {
+        opacity: 1;
+        transform: none;
+        transition: none;
+      }
+    }
+
     .task-card .subject {
       font-weight: 600;
       margin-bottom: 6px;
@@ -886,6 +905,169 @@
       .replace(/'/g, "&#39;");
   }
 
+  /* ---------- ANSI SGR to HTML ---------- */
+  function ansiToHtml(raw) {
+    if (raw == null) return "";
+    var s = String(raw);
+    if (s.length === 0) return "";
+    var out = "";
+    var i = 0;
+    var len = s.length;
+
+    // style state
+    var fg = null, bg = null;
+    var bold = false, dim = false, italic = false, underline = false, reverse = false;
+
+    var currentText = "";
+    var currentStyle = null;
+
+    function styleToCss() {
+      var styles = [];
+      var effFg = fg;
+      var effBg = bg;
+      if (reverse) {
+        var tmp = effFg; effFg = effBg != null ? effBg : "#0d1117"; effBg = tmp != null ? tmp : "#c9d1d9";
+      }
+      if (effFg) styles.push("color:" + effFg);
+      if (effBg) styles.push("background:" + effBg);
+      if (bold) styles.push("font-weight:bold");
+      if (dim) styles.push("opacity:0.65");
+      if (italic) styles.push("font-style:italic");
+      if (underline) styles.push("text-decoration:underline");
+      return styles.length ? styles.join(";") : null;
+    }
+
+    function flush() {
+      if (currentText.length === 0) return;
+      var html = escapeHtml(currentText);
+      if (currentStyle) {
+        out += '<span style="' + currentStyle + '">' + html + '</span>';
+      } else {
+        out += html;
+      }
+      currentText = "";
+    }
+
+    function color256(n) {
+      n = Number(n);
+      if (isNaN(n) || n < 0 || n > 255) return null;
+      if (n < 16) {
+        var base = ["#000000","#cd0000","#00cd00","#cdcd00","#0000ee","#cd00cd","#00cdcd","#e5e5e5",
+                    "#7f7f7f","#ff0000","#00ff00","#ffff00","#5c5cff","#ff00ff","#00ffff","#ffffff"];
+        return base[n];
+      }
+      if (n < 232) {
+        var m = n - 16;
+        var r = Math.floor(m / 36);
+        var g = Math.floor((m % 36) / 6);
+        var b = m % 6;
+        var map = [0,95,135,175,215,255];
+        function h2(v){ var hh=v.toString(16); return hh.length===1?"0"+hh:hh; }
+        return "#" + h2(map[r]) + h2(map[g]) + h2(map[b]);
+      }
+      var v = 8 + (n - 232) * 10;
+      if (v > 255) v = 255;
+      var hh = v.toString(16); if (hh.length===1) hh="0"+hh;
+      return "#" + hh + hh + hh;
+    }
+
+    function applySgr(params) {
+      if (params.length === 0) {
+        fg = bg = null; bold=dim=italic=underline=reverse=false; return;
+      }
+      for (var p = 0; p < params.length; p++) {
+        var code = params[p];
+        if (code === 0) {
+          fg=bg=null; bold=dim=italic=underline=reverse=false;
+        } else if (code === 1) { bold = true; dim = false; }
+        else if (code === 2) { dim = true; bold = false; }
+        else if (code === 3) { italic = true; }
+        else if (code === 4) { underline = true; }
+        else if (code === 7) { reverse = true; }
+        else if (code === 22) { bold = false; dim = false; }
+        else if (code === 23) { italic = false; }
+        else if (code === 24) { underline = false; }
+        else if (code === 27) { reverse = false; }
+        else if (code >= 30 && code <= 37) {
+          fg = ["#000000","#cd0000","#00cd00","#cdcd00","#0000ee","#cd00cd","#00cdcd","#e5e5e5"][code-30];
+        }
+        else if (code >= 40 && code <= 47) {
+          bg = ["#000000","#cd0000","#00cd00","#cdcd00","#0000ee","#cd00cd","#00cdcd","#e5e5e5"][code-40];
+        }
+        else if (code >= 90 && code <= 97) {
+          fg = ["#7f7f7f","#ff0000","#00ff00","#ffff00","#5c5cff","#ff00ff","#00ffff","#ffffff"][code-90];
+        }
+        else if (code >= 100 && code <= 107) {
+          bg = ["#7f7f7f","#ff0000","#00ff00","#ffff00","#5c5cff","#ff00ff","#00ffff","#ffffff"][code-100];
+        }
+        else if (code === 38 && params[p+1] === 5 && params[p+2] != null) {
+          fg = color256(params[p+2]); p += 2;
+        }
+        else if (code === 48 && params[p+1] === 5 && params[p+2] != null) {
+          bg = color256(params[p+2]); p += 2;
+        }
+        else if (code === 39) { fg = null; }
+        else if (code === 49) { bg = null; }
+      }
+    }
+
+    while (i < len) {
+      var ch = s.charCodeAt(i);
+      if (ch === 0x1b && i+1 < len && s.charCodeAt(i+1) === 0x5b) {
+        // ESC[
+        var j = i + 2;
+        var paramsStr = "";
+        var foundFinal = false;
+        while (j < len) {
+          var c = s.charCodeAt(j);
+          if (c === 0x6d) { // 'm' SGR
+            flush();
+            var parts = paramsStr.split(";");
+            var nums = [];
+            for (var k=0; k<parts.length; k++) {
+              var v = parts[k];
+              if (v === "") nums.push(0);
+              else { var n = parseInt(v, 10); if (!isNaN(n)) nums.push(n); }
+            }
+            applySgr(nums);
+            currentStyle = styleToCss();
+            i = j + 1;
+            foundFinal = true;
+            break;
+          } else if (c >= 0x40 && c <= 0x7e) {
+            // other CSI final -> strip silently
+            flush();
+            i = j + 1;
+            foundFinal = true;
+            break;
+          } else {
+            paramsStr += s.charAt(j);
+            j++;
+          }
+        }
+        if (!foundFinal) { i = len; }
+        continue;
+      } else if (ch === 0x1b) {
+        // other ESC (OSC etc) -> skip defensively
+        flush();
+        i++;
+        while (i < len) {
+          var c2 = s.charCodeAt(i);
+          if (c2 === 0x07) { i++; break; }
+          if (c2 === 0x5c && i > 0 && s.charCodeAt(i-1) === 0x1b) { i++; break; }
+          if (c2 >= 0x40 && c2 <= 0x7e) { i++; break; }
+          i++;
+        }
+        continue;
+      } else {
+        currentText += s.charAt(i);
+        i++;
+      }
+    }
+    flush();
+    return out;
+  }
+
   /* ---------- status classification ---------- */
   // bestActivityTime: the server's `live` flag already combines muster's
   // last_seen (only updated by explicit bus calls, not a heartbeat) with
@@ -1117,7 +1299,13 @@
         .join("");
   }
 
-  /* ---------- kanban ---------- */
+  /* ---------- kanban (FLIP card transitions) ---------- */
+  var kanbanHasRendered = false;
+  var prefersReducedMotionMq =
+    typeof window.matchMedia === "function"
+      ? window.matchMedia("(prefers-reduced-motion: reduce)")
+      : { matches: false };
+
   function renderKanban(threads, now) {
     var tasks = (threads || []).filter(function (t) {
       return t.kind === "task" || t.kind === "Task" || !t.kind;
@@ -1147,6 +1335,21 @@
       byStatus[s].push(t);
     });
 
+    var reduceMotion = prefersReducedMotionMq.matches;
+    // First: measure existing cards before DOM wipe (skip first paint + reduced motion)
+    var firstRects = null;
+    if (kanbanHasRendered && !reduceMotion) {
+      firstRects = {};
+      var prevCards = el.kanban.querySelectorAll(".task-card[data-thread-id]");
+      for (var pi = 0; pi < prevCards.length; pi++) {
+        var prev = prevCards[pi];
+        var pid = prev.getAttribute("data-thread-id");
+        if (pid != null && pid !== "") {
+          firstRects[pid] = prev.getBoundingClientRect();
+        }
+      }
+    }
+
     el.kanban.innerHTML = TASK_STATUSES.map(function (s) {
       var cards = byStatus[s] || [];
       var cardsHtml;
@@ -1155,8 +1358,14 @@
       } else {
         cardsHtml = cards
           .map(function (t) {
+            var tid =
+              t.id != null && t.id !== ""
+                ? String(t.id)
+                : "";
             return (
-              '<div class="task-card">' +
+              '<div class="task-card"' +
+              (tid ? ' data-thread-id="' + escapeHtml(tid) + '"' : "") +
+              ">" +
               '<div class="subject">' +
               escapeHtml(t.subject || "(no subject)") +
               "</div>" +
@@ -1192,6 +1401,56 @@
         "</div></div>"
       );
     }).join("");
+
+    // Last / Invert / Play: animate cards that moved; fade+scale new ones
+    if (firstRects && !reduceMotion) {
+      var nextCards = el.kanban.querySelectorAll(".task-card[data-thread-id]");
+      for (var ni = 0; ni < nextCards.length; ni++) {
+        (function (node) {
+          var tid = node.getAttribute("data-thread-id");
+          var first = firstRects[tid];
+          if (first) {
+            var last = node.getBoundingClientRect();
+            var dx = first.left - last.left;
+            var dy = first.top - last.top;
+            if (dx === 0 && dy === 0) return;
+            // Invert: snap to old position with no transition
+            node.style.transform = "translate(" + dx + "px, " + dy + "px)";
+            node.style.transition = "none";
+            // force reflow so the invert sticks before Play
+            void node.offsetHeight;
+            // Play on the next frame so the browser does not coalesce invert+play
+            requestAnimationFrame(function () {
+              node.style.transition = "transform 280ms ease";
+              node.style.transform = "none";
+              var clear = function (ev) {
+                if (ev && ev.propertyName && ev.propertyName !== "transform") return;
+                node.style.transition = "";
+                node.style.transform = "";
+                node.removeEventListener("transitionend", clear);
+              };
+              node.addEventListener("transitionend", clear);
+            });
+          } else {
+            // Brand-new card: fade + scale in via CSS classes
+            node.classList.add("flip-enter");
+            requestAnimationFrame(function () {
+              node.classList.add("flip-enter-active");
+              requestAnimationFrame(function () {
+                node.classList.remove("flip-enter");
+                var clearEnter = function () {
+                  node.classList.remove("flip-enter-active");
+                  node.removeEventListener("transitionend", clearEnter);
+                };
+                node.addEventListener("transitionend", clearEnter);
+              });
+            });
+          }
+        })(nextCards[ni]);
+      }
+    }
+
+    kanbanHasRendered = true;
   }
 
   /* ---------- activity feed ---------- */
@@ -1307,7 +1566,7 @@
     var paneHtml;
     if (a.pane_snapshot != null && String(a.pane_snapshot).length > 0) {
       paneHtml =
-        '<div class="pane-block">' + escapeHtml(a.pane_snapshot) + "</div>";
+        '<div class="pane-block">' + ansiToHtml(a.pane_snapshot) + "</div>";
     } else {
       paneHtml =
         '<div class="pane-missing">No live pane available (tmux not installed on this machine, or agent has no tmux pane). Expected for spoke agents right now.</div>';
@@ -1509,6 +1768,7 @@
       ],
       threads: [
         {
+          id: 12,
           kind: "task",
           status: "claimed",
           subject: "Dashboard: frontend HTML/CSS/JS",
@@ -1517,6 +1777,7 @@
           updated_at: now - 60000
         },
         {
+          id: 13,
           kind: "task",
           status: "open",
           subject: "Dashboard: spoke-side local collector",
@@ -1525,6 +1786,7 @@
           updated_at: now - 30000
         },
         {
+          id: 4,
           kind: "task",
           status: "completed",
           subject: "Fleet task test",
@@ -1533,6 +1795,7 @@
           updated_at: now - 3600000
         },
         {
+          id: 9,
           kind: "task",
           status: "blocked",
           subject: "Wire remote SSH tunnel",
@@ -1578,6 +1841,38 @@
     setPollOk("demo data (file:// or ?demo=1) · poll paused");
     el.lastUpdated.textContent =
       "demo · " + new Date().toLocaleTimeString();
+    // Demo-only harness for automated FLIP tests (no effect in live poll mode)
+    window.__musterFlipTest = {
+      applyPayload: applyPayload,
+      demoPayload: demoPayload,
+      getKanbanHasRendered: function () {
+        return kanbanHasRendered;
+      },
+      getCardTransforms: function () {
+        var out = {};
+        el.kanban.querySelectorAll(".task-card[data-thread-id]").forEach(function (n) {
+          out[n.getAttribute("data-thread-id")] = {
+            transform: n.style.transform || "",
+            transition: n.style.transition || "",
+            classes: n.className
+          };
+        });
+        return out;
+      },
+      cardRects: function () {
+        var out = {};
+        el.kanban.querySelectorAll(".task-card[data-thread-id]").forEach(function (n) {
+          var r = n.getBoundingClientRect();
+          out[n.getAttribute("data-thread-id")] = {
+            left: r.left,
+            top: r.top,
+            width: r.width,
+            height: r.height
+          };
+        });
+        return out;
+      }
+    };
   } else {
     poll();
     setInterval(poll, POLL_MS);
